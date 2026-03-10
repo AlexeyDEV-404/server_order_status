@@ -1,0 +1,13 @@
+# Python кэш
+__pycache__/
+*.pyc
+*.pyo
+
+# База данных
+*.db
+
+# Переменные окружения
+.env
+
+# VSCode
+.vscode/
