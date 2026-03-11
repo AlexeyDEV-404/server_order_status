@@ -1,13 +1,4 @@
 
-def works_tabel(connect):
-    cursor = connect.cursor()
-    cursor.execute("""CREATE TABLE IF NOT EXISTS skills(  
-                            id_skill INTEGER PRIMARY KEY AUTOINCREMENT
-                            category TEXT,
-                            services TEXT,
-                            UNIQUE (category, services)
-                             )""")
-    
 def insept_works(connect, category, service):
     cursor = connect.cursor()
     cursor.execute("""
@@ -23,5 +14,8 @@ def insept_works(connect, category, service):
 
 def select_works(connect):
     cursor = connect.cursor()
-    cursor.execute("""SELECT * FROM skills""")
+    cursor.execute("""SELECT category, GROUP_CONCAT(services, ', ') 
+                    FROM skills
+                   GROUP BY category
+                   """)
     return cursor.fetchall()

@@ -1,8 +1,9 @@
-from database.Repository.orders_db import add_order, specific_order, table_all_orders, assinged_order,update_master_order, in_progress_orders, complete_order, master_chek_order
+from database.Repository.orders_db import add_order, specific_order, table_all_orders, assinged_order,update_master_order, in_progress_orders, complete_order, master_chek_order, cancel_order
 from app.core.business_logic import datetime_now
 from database.doman_rules import rowcount_examinator, chek_fetchone_master_order
 from database.Repository.master_list_db import update_busy_status_master, updete_free_status_master, status_select_master
-from database.Repository.master_skills_db import join_display_master_skills
+from database.Repository.master_skills_db import join_display_master_skills, join_search_master
+from database.Repository.skills_db import select_works
 import sqlite3
 
 
@@ -39,9 +40,6 @@ def server_order_complet(masterID: int, id_order: int):
         master = updete_free_status_master(id_master=masterID, connect=connect)
         rowcount_examinator(master)
 
-
-
-
 def server_display_master_skills():
     with connect_db() as connect:
         result = join_display_master_skills(connect)
@@ -57,9 +55,17 @@ def server_all_orders():
         result = table_all_orders(connect)
     return result
 
+def server_search_master(category, service):
+    with connect_db() as connect:
+        result = join_search_master(connect=connect, category=category, service=service)
+    return result
 
+def server_services():
+    with connect_db() as connect:
+        result = select_works(connect)
+    return result
 
-
-
-
-
+def server_cancel(id_order):
+    with connect_db() as connect:
+        result = cancel_order(connect=connect, id_order=id_order)
+    return result

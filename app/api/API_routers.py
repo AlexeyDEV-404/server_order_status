@@ -1,28 +1,28 @@
 from fastapi import APIRouter, HTTPException
-from database.service import server_order_create_new, server_display_master_skills, service_specific_order, server_all_orders, server_order_master_assinged, server_order_in_progress, server_order_complet
+from database.service import server_order_create_new, server_display_master_skills, service_specific_order, server_all_orders, server_order_master_assinged, server_order_in_progress, server_order_complet, server_search_master, server_services, server_cancel
 from app.api.pydantic_ import UserInput, AssingMaster
 
 router = APIRouter(prefix="/user", tags=["User"])
-
-@router.get("/master")
-def master_category():
-    return server_display_master_skills()
 
 @router.post("/order/new")
 def new_order(user_input: UserInput):
     return server_order_create_new(category=user_input.category, services=user_input.services, description=user_input.description)
 
 @router.post("/order/{id_order}/assinged")
-def assinged(id_order, master: AssingMaster):
-    return server_order_master_assinged(id_order=id_order, masterID=master.masterID)
+def assinged(id_order, data: AssingMaster):
+    return server_order_master_assinged(id_order=id_order, masterID=data.masterID)
 
 @router.post("/order/{id_order}/in_progress")
 def in_progress(id_order):
     return server_order_in_progress(id_order=id_order)
 
 @router.post("/order/{id_order}/completed")
-def completed(id_order):
-    return server_order_complet(id_order=id_order,  masterID=AssingMaster.masterID)
+def completed(id_order, data: AssingMaster):
+    return server_order_complet(id_order=id_order,  masterID=data.masterID)
+
+@router.post("/order/{id_order}/cancel")
+def cancel(id_order):
+    return server_cancel(id_order)
 
 @router.get("/orders/{id_order}")
 def order(id_order: int):
@@ -34,3 +34,15 @@ def order(id_order: int):
 @router.get("/orders")
 def orders_list():
     return server_all_orders()
+
+@router.get("/master_list")
+def display():
+    return server_display_master_skills()
+
+@router.get("/search_master")
+def search_master(category: str, services: str):
+    return server_search_master(category=category, service=services)
+
+@router.get("/service")
+def service():
+    return server_services()

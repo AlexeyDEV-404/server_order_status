@@ -1,20 +1,5 @@
 import sqlite3
 
-DATA_BASE = "database/DATABASE.db"
-
-def create_table_order(connect):
-    cursor = connect.cursor()
-    cursor.execute("""
-       CREATE TABLE IF NOT EXISTS orders(
-                   id_order INTEGER PRIMARY KEY AUTOINCREMENT,
-                   category TEXT NOT NULL,
-                   service TEXT NOT NULL,
-                   description TEXT NOT NULL,
-                   status TEXT NOT NULL CHECK(status IN ("NEW", "ASSINGED", "IN_PROGRESS", "DONE", "CANCELLED")),
-                   created_at TEXT NOT NULL,
-                   master INTEGER) 
-    """)
-
 def add_order(connect, category: str, services: str, description: str, status: str, created_at: str, master=None):
     cursor = connect.cursor()
     cursor.execute("""INSERT INTO orders(

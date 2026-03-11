@@ -1,14 +1,3 @@
-
-
-def create_master(connect):
-    cursor = connect.cursor()
-    cursor.execute(
-        """CREATE TABLE IF NOT EXISTS master_list(
-        id_master INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        status TEXT CHECK(status in ("FREE", "BUSY"))
-        )        
-        """)
     
 def add_master(connect, Name: str):
     cursor = connect.cursor()
