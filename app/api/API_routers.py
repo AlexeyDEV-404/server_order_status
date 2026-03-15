@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from database.service import server_order_create_new, server_display_master_skills, service_specific_order, server_all_orders, server_order_master_assinged, server_order_in_progress, server_order_complet, server_search_master, server_services, server_cancel
+from database.service import server_order_create_new, server_display_master_skills, server_specific_order, server_all_orders, server_order_master_assinged, server_order_in_progress, server_order_complet, server_search_master, server_services, server_cancel
 from app.api.pydantic_ import UserInput, AssingMaster
 
 router = APIRouter(prefix="/user", tags=["User"])
@@ -27,7 +27,7 @@ def cancel(id_order):
 @router.get("/orders/{id_order}")
 def order(id_order: int):
     try:
-        return service_specific_order(id_order=id_order)
+        return server_specific_order(id_order=id_order)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     

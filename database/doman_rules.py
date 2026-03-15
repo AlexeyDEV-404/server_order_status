@@ -1,8 +1,4 @@
 
-
-
-
-
 def rowcount_examinator(rowcount):
     if rowcount >= 1:
         return "Обновление успешно"
@@ -19,7 +15,7 @@ def chek_select_fetchone(fetchone):
         raise ValueError("Мастера не существует")
     return fetchone
     
-def chek_fetchone_master_order(fetchone):
+def chek_fetchone_master_order(fetchone): # работает с master_chek_order в файле orders_db.py возвращает число из-за COUNT(*) в условии запроса
     if fetchone != 0:
         raise ValueError("Ошибка: Мастере занят и не может быть назначен на заказ.") 
     

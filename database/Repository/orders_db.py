@@ -57,7 +57,7 @@ def delete_order(connect, id_delete: int): # Удаление данных за�
     cursor.execute("""DELETE FROM orders WHERE id_order = ?""", (id_delete,))
     return cursor.rowcount
     
-def assinged_order(connect, id_order: int): # ASSINGED - мастер для заказа найден
+def assinged_order(connect, id_order: int): # ASSINGED (назначенный) - мастер для заказа найден
     cursor = connect.cursor()
     cursor.execute("""UPDATE orders
                    SET status = 'ASSINGED'
@@ -77,7 +77,7 @@ def in_progress_orders(connect, id_order: int):
 def complete_order(connect, id_order: int):
     cursor = connect.cursor()
     cursor.execute("""UPDATE orders
-                   SET status = 'COMPLETED', master = 0
+                   SET status = 'COMPLETED', master = NULL
                    WHERE status = 'IN_PROGRESS'
                    AND id_order = ?
                    """, (id_order,))

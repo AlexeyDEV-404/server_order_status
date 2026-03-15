@@ -10,8 +10,8 @@ def add_master(connect, Name: str):
         """, (
             Name, "FREE"
         ))
-    return {"msg" : "Добавлен в таблицу мастеров"}
-
+    
+    return cursor.lastrowid
 def status_select_master(connect, id_master):
     cursor = connect.cursor()
     cursor.execute("""

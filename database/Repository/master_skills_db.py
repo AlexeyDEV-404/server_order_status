@@ -5,6 +5,7 @@ def insert_master_skill(connect, master_id, skill_id):
                    master_id,
                    skill_id
                    ) VALUES (?, ?)""", (master_id, skill_id))
+    
     return cursor.lastrowid
 
 def select_table_masters_skills(connect):
@@ -23,10 +24,10 @@ def join_search_master(connect, category, service): # Поиск мастера 
     cursor.execute("""
         SELECT m.id_master, m.name
         FROM master_list AS m
-        JOIN master_skills ms ON m.id_master = ms.id_master
+        JOIN masters_skills ms ON m.id_master = ms.master_id
         JOIN skills s ON ms.skill_id = s.id_skill
         WHERE s.category = ? 
-        AND s.service = ?
+        AND s.services = ?
         AND m.status = "FREE"
         """, (category, service))
     rows = cursor.fetchall()

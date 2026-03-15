@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS masters_skills(
         skill_id INTEGER NOT NULL,
         PRIMARY KEY(master_id, skill_id),
         FOREIGN KEY (master_id) REFERENCES master_list (id_master) ON DELETE CASCADE,
-        FOREIGN KEY (skill_id) REFERENCES works(id_works) ON DELETE CASCADE);
+        FOREIGN KEY (skill_id) REFERENCES skills(id_skill) ON DELETE CASCADE);
 
 CREATE TABLE IF NOT EXISTS orders(
         id_order INTEGER PRIMARY KEY AUTOINCREMENT,
