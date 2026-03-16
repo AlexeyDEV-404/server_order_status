@@ -1,5 +1,5 @@
     
-def add_master(connect, Name: str):
+def add_master(connect, name: str):
     cursor = connect.cursor()
     cursor.execute("""
         INSERT INTO master_list(
@@ -8,7 +8,7 @@ def add_master(connect, Name: str):
                    )
         VALUES(?, ?)
         """, (
-            Name, "FREE"
+            name, "FREE"
         ))
     
     return cursor.lastrowid

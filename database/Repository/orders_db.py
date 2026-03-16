@@ -36,12 +36,12 @@ def specific_order(connect, id_order: int): # конкретная строка 
     result = cursor.fetchone()
     return dict(result) if result else None
 
-def master_chek_order(connect, id_master):
+def master_chek_order_count(connect, id_master):
     cursor = connect.cursor()
     cursor.execute("""SELECT COUNT(*) 
                    FROM orders 
                    WHERE master = ?
-                   AND status = 'IN_PROGRESS'""", (id_master))
+                   AND status = 'IN_PROGRESS'""", (id_master,))
     return cursor.fetchone()[0]
     
 def update_master_order(connect, id_master: int, id_order): #Обновление поля мастера

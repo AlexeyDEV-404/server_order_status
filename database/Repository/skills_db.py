@@ -14,8 +14,8 @@ def insept_works(connect, category, service):
 
 def select_works(connect):
     cursor = connect.cursor()
-    cursor.execute("""SELECT category, GROUP_CONCAT(services, ', ') 
-                    FROM skills
-                   GROUP BY category
+    cursor.execute("""SELECT category, GROUP_CONCAT(services, ', ') AS services
+                FROM skills
+                GROUP BY category
                    """)
     return cursor.fetchall()

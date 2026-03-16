@@ -1,3 +1,6 @@
+import sqlite3
+
+
 
 def insert_master_skill(connect, master_id, skill_id):
     cursor = connect.cursor()
@@ -36,9 +39,9 @@ def join_search_master(connect, category, service): # Поиск мастера 
 def join_display_master_skills(connect): # Отображение всех мастеров
     cursor = connect.cursor()
     cursor.execute("""
-        SELECT m.name, s.category, s.service, m.status
+        SELECT m.name, s.category, s.services, m.status
         FROM master_list AS m
-        JOIN master_skills AS ms ON ms.master_id = m.id_master
+        JOIN masters_skills AS ms ON ms.master_id = m.id_master
         JOIN skills AS s ON ms.skill_id = s.id_skill
                   """)
     rows = cursor.fetchall()

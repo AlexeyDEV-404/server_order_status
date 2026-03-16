@@ -1,4 +1,4 @@
-from database.doman_rules import rowcount_examinator, free_status_master_examination_0, chek_fetchone_master_order, chek_select_fetchone
+from database.doman_rules import rowcount_examinator, free_status_master_examination_0, chek_fetchone_master_order_count, chek_select_fetchone
 import pytest
 
 @pytest.mark.parametrize("rowcount, excepted", [
@@ -37,8 +37,8 @@ def test_chek_select_fetchone_tru(fetchone):
 @pytest.mark.parametrize("fetchone", [1, 5, 20])
 def test_chek_fetchone_master_order(fetchone):
     with pytest.raises(ValueError):
-        chek_fetchone_master_order(fetchone)
+        chek_fetchone_master_order_count(fetchone)
 
 def test_chek_fetchone_master_order_free():
-    chek_fetchone_master_order(0) 
+    chek_fetchone_master_order_count(0) 
 

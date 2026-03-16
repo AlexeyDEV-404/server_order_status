@@ -46,7 +46,7 @@ def test_assinged_order(db):
     assert check_result["status"] == "ASSINGED"
 
 def test_complete_order(db):
-    add_master(Name="Сергей", connect=db)
+    add_master(name="Сергей", connect=db)
     id = add_order(connect=db, category="Сантехника", services="Замена труб", description="Течёт труба под раковиной", status="NEW", created_at=str(datetime.now()), master=1)
 
     assinged_order(id_order=id, connect=db)

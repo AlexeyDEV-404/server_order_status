@@ -15,8 +15,15 @@ def chek_select_fetchone(fetchone):
         raise ValueError("Мастера не существует")
     return fetchone
     
-def chek_fetchone_master_order(fetchone): # работает с master_chek_order в файле orders_db.py возвращает число из-за COUNT(*) в условии запроса
+def chek_fetchone_master_order_count(fetchone : int): # работает с master_chek_order в файле orders_db.py возвращает число из-за COUNT(*) в условии запроса
     if fetchone != 0:
-        raise ValueError("Ошибка: Мастере занят и не может быть назначен на заказ.") 
+        raise ValueError("Ошибка: Мастере занят и не может быть назначен на заказ.")  
     
+def chek_fetchone_master_order_free(fetchone: str):
+    if fetchone == "BUSY":
+        raise ValueError("Мастер занят и не может принять заказ.")
+    
+ 
+
+
 

@@ -3,7 +3,7 @@ from database.service import server_order_create_new, server_display_master_skil
 from app.api.pydantic_ import UserInput, AssingMaster
 
 router = APIRouter(prefix="/user", tags=["User"])
-
+#Тест написан
 @router.post("/order/new")
 def new_order(user_input: UserInput):
     return server_order_create_new(category=user_input.category, services=user_input.services, description=user_input.description)
@@ -23,14 +23,14 @@ def completed(id_order, data: AssingMaster):
 @router.post("/order/{id_order}/cancel")
 def cancel(id_order):
     return server_cancel(id_order)
-
+#В процессе
 @router.get("/orders/{id_order}")
 def order(id_order: int):
     try:
         return server_specific_order(id_order=id_order)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    
+#Тест написан
 @router.get("/orders")
 def orders_list():
     return server_all_orders()
