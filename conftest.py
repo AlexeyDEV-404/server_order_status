@@ -21,7 +21,7 @@ def client_app():
 
 @pytest.fixture
 def order_one(db):
-    return orders_db.add_order(status="NEW", created_at=str(datetime.now()) ,connect=db, category="Сантехника", services="замена труб", description="Протечка")
+    return orders_db.add_order(status="NEW", created_at=str(datetime.now()), connect=db, category="Сантехника", services="замена труб", description="Протечка")
 
 @pytest.fixture
 def add_master_and_order_assinged(monkeypatch, db, order_one):

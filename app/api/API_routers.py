@@ -7,23 +7,23 @@ router = APIRouter(prefix="/user", tags=["User"])
 @router.post("/order/new")
 def new_order(user_input: UserInput):
     return server_order_create_new(category=user_input.category, services=user_input.services, description=user_input.description)
-
+#Тест написан
 @router.post("/order/{id_order}/assinged")
 def assinged(id_order, data: AssingMaster):
     return server_order_master_assinged(id_order=id_order, masterID=data.masterID)
-
+#Тест написан
 @router.post("/order/{id_order}/in_progress")
 def in_progress(id_order):
     return server_order_in_progress(id_order=id_order)
-
+#Тест написан
 @router.post("/order/{id_order}/completed")
 def completed(id_order, data: AssingMaster):
     return server_order_complet(id_order=id_order,  masterID=data.masterID)
-
+#Тест написан
 @router.post("/order/{id_order}/cancel")
 def cancel(id_order):
     return server_cancel(id_order)
-#В процессе
+#Тест написан
 @router.get("/orders/{id_order}")
 def order(id_order: int):
     try:
@@ -34,15 +34,15 @@ def order(id_order: int):
 @router.get("/orders")
 def orders_list():
     return server_all_orders()
-
+#Тест написан (чисто статус код)
 @router.get("/master_list")
 def display():
     return server_display_master_skills()
-
+#Тест написан (чисто статус код)
 @router.get("/search_master")
 def search_master(category: str, services: str):
     return server_search_master(category=category, service=services)
-
+#Тест написан (чисто статус код)
 @router.get("/service")
 def service():
     return server_services()
