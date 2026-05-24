@@ -16,6 +16,7 @@ def chek_select_fetchone(fetchone):
     return fetchone
     
 def chek_fetchone_master_order_count(fetchone : int): # работает с master_chek_order в файле orders_db.py возвращает число из-за COUNT(*) в условии запроса
+    """ Проверка, назначен ли мастер. """
     if fetchone != 0:
         raise ValueError("Ошибка: Мастере занят и не может быть назначен на заказ.")  
     

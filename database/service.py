@@ -1,71 +1,76 @@
-from database.Repository.orders_db import add_order, specific_order, table_all_orders, assinged_order,update_master_order, in_progress_orders, complete_order, master_chek_order_count, cancel_order
-from app.core.business_logic import datetime_now
 from database.doman_rules import rowcount_examinator, chek_fetchone_master_order_count, chek_fetchone_master_order_free
-from database.Repository.master_list_db import update_busy_status_master, updete_free_status_master, status_select_master
-from database.Repository.master_skills_db import join_display_master_skills, join_search_master
-from database.Repository.skills_db import select_works
-import sqlite3
+from SQLAlchemy_work_db import repository, engine_and_models
+from SQLAlchemy_work_db.enusm import StatusOrders
 
+SESSION = engine_and_models.SESSION
+
+OrdRep = repository.OrderRepository
+MastListRep = repository.MasterListRepository
+MastSkillsRep = repository.MasterSkillsRepository
+SkillsRepo = repository.SkillsRepository
 
 DATA_BASE = "database/DATABASE.db"
-def connect_db():
-    return sqlite3.connect(DATA_BASE)
-# Тест написан
-def server_order_create_new(category: str, services: str,  description: str):
+
+def connect_db(): return SESSION
+
+def server_order_create_new(category: str, service: str,  description: str):
     with connect_db() as connect:
-        add = add_order(connect=connect, category=category, services=services, description=description, status="NEW", created_at=datetime_now())
+        add = OrdRep(connect).add_order(category=category, service=service, description=description, status=StatusOrders.NEW)
         rowcount_examinator(rowcount=add)
-    return "Заказ создан и сохранен в базу данных"
-# Тест написан
-def server_order_master_assinged(masterID: int, id_order: int): # Назначаем мастера на заказ, меняем статус 
+        connect.commit()
+    return f"Заказ создан и сохранен в базу данных. ID заказа {add}"
+
+def server_order_master_assinged(masterID: int, orderID: int):  
     with connect_db() as connect:
-        master_chek_1 = master_chek_order_count(connect=connect, id_master=masterID) # Выводим инф., назначен ли мастер
-        chek_fetchone_master_order_count(master_chek_1) # Проверка, назначен ли мастер.
-        master_chek_2 = status_select_master(id_master=masterID, connect=connect) # Смотрим статус мастера
-        chek_fetchone_master_order_free(master_chek_2) # Проверяем статус мастера
-        result = assinged_order(connect=connect, id_order=id_order) # Переводи заказ в статус assigned (назначенный)
-        update_master_order(connect=connect, id_order=id_order, id_master=masterID) # Обновляем поле master в таблице orders (заказы)
-        master_buse = update_busy_status_master(id_master=masterID, connect=connect) # переводим статус мастера (табл. master_list - список всех мастеров) в BUSY-занятый и проверяем что он FREE (свободный)
-        rowcount_examinator(master_buse) # Проверка, что "master_buse = update_busy_status_master" прошел успешно.
+        check_orders_per_craftsman = OrdRep(connect).master_chek_order_count(master_id=masterID) 
+        chek_fetchone_master_order_count(check_orders_per_craftsman)
+        check_status_per_craftsman = MastListRep(connect).what_is_the_status(id=masterID)
+        chek_fetchone_master_order_free(check_status_per_craftsman)
+        result = OrdRep(connect).assinged_order(order_id=orderID)
+        OrdRep(connect).update_master_order(master_id=masterID, order_id=orderID)
+        update_status_in_db = MastListRep(connect).update_busy_status_master(id=orderID)
+        rowcount_examinator(update_status_in_db)
     return result
-# Тест написан
-def server_order_in_progress(id_order): # Заказ в процессе выполнения
+
+def server_order_in_progress(orderID): # Заказ в процессе выполнения
     with connect_db() as connect:
-        in_progress_orders(connect=connect, id_order=id_order)
-# Тест написан
-def server_order_complet(masterID: int, id_order: int): # Перевести заказ в статус "выполнен" (complet)
+        OrdRep(connect).in_progress_orders(order_id=orderID)
+        # in_progress_orders(connect=connect, id_order=id_order)
+
+
+def server_order_complet(masterID: int, orderID: int): # Перевести заказ в статус "выполнен" (complet)
     with connect_db() as connect:
-        order = complete_order(connect=connect, id_order=id_order)
+        order = OrdRep(connect).complete_order(order_id=orderID)
         rowcount_examinator(order)
-        master = updete_free_status_master(id_master=masterID, connect=connect)
+        master = MastListRep(connect).update_free_status_master(id=masterID)
         rowcount_examinator(master)
-# Тест написан
+
 def server_display_master_skills(): # Какими навыками работ обладает мастер
     with connect_db() as connect:
-        result = join_display_master_skills(connect)
+        result = MastSkillsRep(connect).informarion_about_craftsmen()
     return result
-# тест написан
-def server_specific_order(id_order: int): # Найти указанный заказ № id_order
+
+def server_specific_order(orderID: int): # Найти указанный заказ № id_order
     with connect_db() as connect:
-        result = specific_order(connect=connect, id_order=id_order)
+        result = OrdRep(connect).specific_order(order_id = orderID)
     return result
-# Тест написан
-def server_all_orders(): # Таблица всех заказов что есть в базе данных
+
+def server_all_orders(): 
     with connect_db() as connect:
-        result = table_all_orders(connect)
+        result = OrdRep(connect).all_orders()
     return result
-# Тест написан
-def server_search_master(category, service): # Поиск мастера, по нужному типу работы.
+
+def server_search_master(category, service): 
     with connect_db() as connect:
-        result = join_search_master(connect=connect, category=category, service=service)
+        result = MastSkillsRep(connect).search_master(category=category, service=service)
     return result
-# Тест написан
+
 def server_services(): #Список выполняемых работ
     with connect_db() as connect:
-        result = select_works(connect)
+        result = SkillsRepo(connect).select_works()
     return result
-# Тест написан
-def server_cancel(id_order): # Отмена заказа
+
+def server_cancel(orderID): # Отмена заказа
     with connect_db() as connect:
-        result = cancel_order(connect=connect, id_order=id_order)
+        result = OrdRep(connect).cancel_order(order_id=orderID)
     return result

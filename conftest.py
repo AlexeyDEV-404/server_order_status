@@ -4,6 +4,9 @@ from fastapi.testclient import TestClient
 from database import service
 from database.Repository import master_skills_db, skills_db, master_list_db, orders_db
 from datetime import datetime
+from sqlalchemy import create_engine
+from SQLAlchemy_work_db.engine_and_models import Base, sessionmaker
+
 
 @pytest.fixture
 def db():
@@ -13,6 +16,16 @@ def db():
         connect.executescript(f.read())
     yield connect
     connect.close()
+
+@pytest.fixture
+def SQLALchemy_db():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    yield session
+    session.close()
+    Base.metadata.drop_all(engine)
 
 @pytest.fixture
 def client_app():
@@ -31,7 +44,7 @@ def add_master_and_order_assinged(monkeypatch, db, order_one):
     return {"order" : order_one,  "id_master": id_master}
 
 @pytest.fixture
-def  order_in_progress(add_master_and_order_assinged):
+def order_in_progress(add_master_and_order_assinged):
     order_assinged = add_master_and_order_assinged["order"]
     service.server_order_in_progress(id_order=order_assinged)
     return add_master_and_order_assinged
