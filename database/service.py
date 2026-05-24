@@ -28,7 +28,7 @@ def server_order_master_assinged(masterID: int, orderID: int):
         chek_fetchone_master_order_free(check_status_per_craftsman)
         result = OrdRep(connect).assinged_order(order_id=orderID)
         OrdRep(connect).update_master_order(master_id=masterID, order_id=orderID)
-        update_status_in_db = MastListRep(connect).update_busy_status_master(id=orderID)
+        update_status_in_db = MastListRep(connect).update_busy_status_master(id=masterID)
         rowcount_examinator(update_status_in_db)
     return result
 
