@@ -23,8 +23,8 @@ def chek_fetchone_master_order_count(fetchone : int): # работает с mast
 def chek_fetchone_master_order_free(fetchone: str):
     if fetchone == "BUSY":
         raise ValueError("Мастер занят и не может принять заказ.")
-    
  
+
 
 
 

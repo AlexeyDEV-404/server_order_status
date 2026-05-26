@@ -16,12 +16,12 @@ class MasterListRepository:
         return result.scalar()
     
     def what_is_the_status(self, id: int):
-        """ Возращает поле таблицы status конкретного мастера. id - долежн быть целым числом и относится к конкретному мастеру."""
+        """ Отвечает на вопрос, какой статус у мастера? Где параметр метода id - существующего мастера."""
         result = self.session_manag.execute(select(MasterList.status).where(MasterList.id == id)).scalar_one()
         return result
     
     def master_info(self, id: int):
-        """ Возвращает информацию про конкретного мастера. id - долежн быть целым числом и относится к конкретному мастеру."""
+        """ Возвращает информацию про конкретного мастера. id - долежн быть целым числом и относится к конкретному мастеру. """
         return self.session_manag.execute(select(MasterList).where(MasterList.id == id)).first()
     
     def update_free_status_master(self, id: int):
@@ -39,7 +39,7 @@ class MasterSkillsRepository:
         self.session_manag = session_manag
 
     def add_master_skills(self, master_id, skill_id):
-        """ Таблица навыков мастеров, хранящаяся как список id навыка и мастера."""
+        """ Делает вставку навыка мастера. ID мастера и ID конкретного навыка."""
         return cast(CursorResult, self.session_manag.execute(insert(MasterSkills).values(master_id = master_id, skill_id = skill_id))).rowcount
 
     def all_table(self):
@@ -51,7 +51,7 @@ class MasterSkillsRepository:
         return self.session_manag.execute(select(MasterSkills).where(MasterSkills.master_id == master_id)).all()
     
     def search_master(self, category: str, service: str):
-        """ Ищем всех мастеров, которые могут оказать определенную услугу. """
+        """ Ищем всех мастеров, которые могут оказать определенную услугу. Возвращает [(id, name)]"""
         return self.session_manag.execute(
             select(MasterList.id, MasterList.name).
             join(MasterSkills).join(Skills).
@@ -70,53 +70,57 @@ class OrderRepository:
     def __init__(self, session_manag : Session):
         self.session_manag = session_manag
 
-    def add_order(self, category: str, service: str, description: str, status: StatusOrders,  master=None):
-        """ Добавить заказ к таблицу """
-        return self.session_manag.execute(insert(Orders).values(category=category, service=service, description = description, status = status,  master = master).returning(Orders.id)).scalar()
+    
+    def add_order(self, category: str, service: str, description: str, status = StatusOrders.NEW,  master=None):
+        """ Добавить заказ к таблицу. Возвращает .scalar()"""
+        return self.session_manag.execute(insert(Orders).values(category=category, service=service, description = description, status = status,  master = master).returning(Orders.id)).scalar_one()
     
     def all_orders(self):
         """ Показать всю таблицу с заказами."""
         return self.session_manag.execute(select(Orders)).all()
     
     def specific_order(self, order_id):
-        """ Показать конкретную строку (заказ) из таблицы"""
+        """ Показать конкретную строку (заказ) из таблицы. Возвращает .scalar_one()"""
         return self.session_manag.execute(select(Orders).where(Orders.id == order_id)).scalar_one()
     
     def master_chek_order_count(self, master_id):
-        """ Все заказы мастера со статусом IN_PROGRESS"""
+        """ Возвращает скалярное значение int, всех заказов со статусом IN_PROGRESS у мастера. Возвращает .scalar_one()"""
         return self.session_manag.execute(select(func.count(Orders.id)).where(and_(Orders.master == master_id, Orders.status == StatusOrders.IN_PROGRESS))).scalar_one()
     
     def update_master_order(self, master_id: int, order_id: int):
-        """ Закрепить за заказом, мастера """
+        """ Закрепить за заказом, мастера. Возвращает .rowcount() """
         return cast(CursorResult, self.session_manag.execute(update(Orders).values(master = master_id).where(Orders.id == order_id))).rowcount
     
-    def delete_order(self, delete_id):
-        """ Удаляем заказ из базы данных."""
-        return cast(CursorResult ,self.session_manag.execute((delete(Orders).where(Orders.id == delete_id)))).rowcount
+    def delete_order(self, id):
+        """ Удаляем заказ из базы данных. Возвращает .rowcount()"""
+        return cast(CursorResult ,self.session_manag.execute((delete(Orders).where(Orders.id == id)))).rowcount
     
     def assinged_order(self, order_id: int):
-        """ Ищем свободный заказ для мастера."""
+        """Меняем статус заказа на - 'ASSINGED', у которого статус заказа - 'NEW'. Возвращает .rowcount()"""
         return cast(CursorResult, self.session_manag.execute(update(Orders).values(status = StatusOrders.ASSINGED).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)))).rowcount
 
     def in_progress_orders(self, order_id: int):
+        """ Переводчи статус заказа с ASSINGED на IN_PROGRESS. Возвращает .rowcount()"""
         return cast(CursorResult, self.session_manag.execute(update(Orders).values(status = StatusOrders.IN_PROGRESS).where(and_(Orders.status == StatusOrders.ASSINGED, Orders.id == order_id)))).rowcount
 
     def complete_order(self, order_id: int):
+        """ Переводчи статус заказа с IN_PROGRESS в COMPLETED. Возвращает .rowcount()"""
         return cast(CursorResult, self.session_manag.execute(update(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id)))).rowcount
 
     def cancel_order(self, order_id: int):
+        """ Переводчи статус заказа с NEW в  CANCEL"""
         return cast(CursorResult, self.session_manag.execute(update(Orders).values(status = StatusOrders.CANCEL).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)).returning(Orders.status))).scalar_one()
 
 class SkillsRepository:
     def __init__(self, session_manag : Session):
         self.session_manag = session_manag
 
-    def insert_works(self, category, service):
-        """ Добавляем строку в таблицу со всеми навыками"""
+    def insert_skill(self, category, service):
+        """ Добавляем строку в таблицу со всеми навыками """
         return self.session_manag.execute(insert_dialects(Skills).values(category = category, service = service).on_conflict_do_nothing().returning(Skills.id)).scalar()
     
     def select_works(self):
-        """ Обращаемся к талице навыков и просим показать все что у нее есть, сгрупировав результаты по типу категория + перечисление подкатегорий"""
+        """ Делаем запрос к БД и возвращаем список выполняемых работ в виде [("категория", "перечисление, видов, услуг, через, запятую")]. Возвращает .fetchall()"""
         return self.session_manag.execute(select(Skills.category, func.group_concat(Skills.service, ', ')).group_by(Skills.category)).fetchall()
 
     

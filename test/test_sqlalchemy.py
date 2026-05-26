@@ -1,5 +1,8 @@
-# pytest -s SQLAlchemy_work_db\test\test_sqlalchemy.py -v
-# pytest -s SQLAlchemy_work_db\test\test_sqlalchemy.py::test_MastSkillsRep_all_table -v
+# pytest -s test\test_sqlalchemy.py -v
+# pytest -s test\test_end_to_end.py::test_lifecycle_order -v
+
+
+
 
 from SQLAlchemy_work_db import repository
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
@@ -44,7 +47,7 @@ def test_MastListRep_update_busy_status_master(db, add_master):
 
 def test_SkillsRepo_insert_works(db, insert_works):
     """ Тестируем работу insert_works (вставка скилов в таблицу)."""
-    result = SkillsRepo(db).insert_works(category="Сантехника", service = "Ремонт трубы")
+    result = SkillsRepo(db).insert_skill(category="Сантехника", service = "Ремонт трубы")
     assert result == None or result > 0
 
 def test_SkillsRepo_select_works(db, insert_works):
@@ -67,7 +70,7 @@ def test_MastSkillsRep_add_master_skills(db, insert_works, add_master):
     assert count == len(skills)
     
 def test_MastSkillsRep_all_table(db, insert_works, add_master):
-    SkillsRepo(db).insert_works(category="Сантехника", service = "Ремонт трубы")
+    SkillsRepo(db).insert_skill(category="Сантехника", service = "Ремонт трубы")
     db.commit()
     add = MastSkillsRep(db).add_master_skills(master_id=add_master, skill_id=1)
     result = MastSkillsRep(db).all_table()
@@ -77,18 +80,18 @@ def test_MastSkillsRep_all_table(db, insert_works, add_master):
     print(type(result[0]))
     print(result[0].master_id)
     assert result[0][0].master_id > 0
-    # assert isinstance(result[0], MasterSkills)
+
 
 def test_MastSkillsRep_master_skills(db, add_master): 
-    mast = SkillsRepo(db).insert_works(category="Сантехника", service = "Ремонт трубы")
+    mast = SkillsRepo(db).insert_skill(category="Сантехника", service = "Ремонт трубы")
     add = MastSkillsRep(db).add_master_skills(master_id=add_master, skill_id=1)
     result = MastSkillsRep(db).master_skills(add_master)
     db.commit()
     assert result[0][0].master_id > 0
-    # assert isinstance(result[0], MasterSkills)
+
 
 def test_MastSkillsRep_search_master(db, add_master):
-    skil = SkillsRepo(db).insert_works(category="Сантехника", service = "Ремонт трубы")
+    skil = SkillsRepo(db).insert_skill(category="Сантехника", service = "Ремонт трубы")
     MastSkillsRep(db).add_master_skills(master_id=add_master, skill_id=skil)
     result = MastSkillsRep(db).search_master(category="Сантехника", service = "Ремонт трубы")
     

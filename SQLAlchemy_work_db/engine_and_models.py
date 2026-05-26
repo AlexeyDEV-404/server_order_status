@@ -15,7 +15,7 @@ url = f"sqlite+{driver}:///{DB}"
 
 engine = create_engine(url, echo=True)
 session = sessionmaker(bind=engine)
-SESSION = session()
+
 
 
 class Base(DeclarativeBase): pass

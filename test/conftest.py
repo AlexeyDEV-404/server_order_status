@@ -69,12 +69,12 @@ def insert_works(db):
 
     for key, value in categories_services.items():
         for x in value:
-            SkillsRepo(db).insert_works(key, x)
+            SkillsRepo(db).insert_skill(key, x)
     db.commit()
 
 @pytest.fixture
 def insert_work(db):
-    return SkillsRepo(db).insert_works(category="Сантехника", service = "Ремонт трубы")
+    return SkillsRepo(db).insert_skill(category="Сантехника", service = "Ремонт трубы")
      
 
 
