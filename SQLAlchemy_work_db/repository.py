@@ -44,7 +44,7 @@ class MasterSkillsRepository:
 
     def all_table(self):
         """ Возвращает всю таблицу навыков мастеров."""
-        return self.session_manag.execute(select(MasterSkills)).all()
+        return self.session_manag.execute(select(MasterSkills)).scalars().all()
     
     def master_skills(self, master_id: int):
         """ Делаем запрос - 'Какими навыками обладает мастер?'"""
@@ -59,12 +59,13 @@ class MasterSkillsRepository:
 
     def informarion_about_craftsmen(self):
         """ Создаем таблицу через join с полями name|category|service|status. Переименованный метод join_display_master_skills"""
-        return self.session_manag.execute(
+        results = self.session_manag.execute(
             select(MasterList.name, Skills.category, Skills.service, MasterList.status)
             .select_from(MasterList)
             .join(MasterSkills)
             .join(Skills)
             ).all()
+        return  [{"name": result.name, "category": result.category, "service": result.service, "status":result.status} for result in results]
 
 class OrderRepository:
     def __init__(self, session_manag : Session):
@@ -77,7 +78,8 @@ class OrderRepository:
     
     def all_orders(self):
         """ Показать всю таблицу с заказами."""
-        return self.session_manag.execute(select(Orders)).all()
+        return self.session_manag.execute(select(Orders)).scalars().all()
+
     
     def specific_order(self, order_id):
         """ Показать конкретную строку (заказ) из таблицы. Возвращает .scalar_one()"""
@@ -121,7 +123,6 @@ class SkillsRepository:
     
     def select_works(self):
         """ Делаем запрос к БД и возвращаем список выполняемых работ в виде [("категория", "перечисление, видов, услуг, через, запятую")]. Возвращает .fetchall()"""
-        return self.session_manag.execute(select(Skills.category, func.group_concat(Skills.service, ', ')).group_by(Skills.category)).fetchall()
+        return self.session_manag.execute(select(Skills.category, func.group_concat(Skills.service, ', ')).group_by(Skills.category)).all()
 
-    
     

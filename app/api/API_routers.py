@@ -47,7 +47,7 @@ def insert_skill(category: str, service: str):
 def master_info(id):
     return server_master_info(id)
 
-@router.get("/orders/{id_order}")
+@router.get("/order/{id_order}")
 def order(id_order: int):
     try:
         return server_specific_order(orderID=id_order)

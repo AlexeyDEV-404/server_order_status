@@ -1,5 +1,7 @@
 from database.doman_rules import rowcount_examinator, chek_fetchone_master_order_count, chek_fetchone_master_order_free
 from SQLAlchemy_work_db import repository, engine_and_models
+from SQLAlchemy_work_db.engine_and_models import Orders 
+
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
 
 
@@ -50,32 +52,33 @@ def server_order_complet(masterID: int, orderID: int): # Перевести за
 def server_display_master_skills(): # Какими навыками работ обладает мастер
     with SESSION() as connect:
         result = MastSkillsRep(connect).informarion_about_craftsmen()
-        connect.commit()
+        
     return result
 
 def server_specific_order(orderID: int): # Найти указанный заказ № id_order
     with SESSION() as connect:
         result = OrdRep(connect).specific_order(order_id = orderID)
-        connect.commit()
-    return result
+        if result is None:
+            return {"error": f"Заказ с ID {orderID} не найден"}
+        x = result.to_dict()    
+    return x
 
 def server_all_orders(): 
     with SESSION() as connect:
-        result = OrdRep(connect).all_orders()
-        connect.commit()
-    return result
+        orders = OrdRep(connect).all_orders()
+        x = [order.to_dict() for order in orders]
+    return x
 
 def server_search_master(category, service): 
     with SESSION() as connect:
         result = MastSkillsRep(connect).search_master(category=category, service=service)
-        connect.commit()
-    return result
+        
+    return [{"id": r.id, "name": r.name} for r in result]
 
 def server_services(): #Список выполняемых работ
     with SESSION() as connect:
-        result = SkillsRepo(connect).select_works()
-        connect.commit()
-    return result
+        results = SkillsRepo(connect).select_works()
+    return [{"category": r[0], "service": r[1].split(", ")} for r in results]
 
 def server_cancel_order(orderID): # Отмена заказа
     with SESSION() as connect:
@@ -93,12 +96,15 @@ def server_add_master_in_db(name, status: StatusMasterCheck):
     with SESSION() as connect:
         MastListRep(connect).add(name = name, status = status)
         connect.commit()
+    return "Мастер добавлен."
 
 def server_master_info(id):
     """ Возвращает строку про мастера. id должен соответствовать текущему мастеру, который есть в БД."""
     with SESSION() as connect:
-        MastListRep(connect).master_info(id)
-        connect.commit()
+        result = MastListRep(connect).master_info(id)
+        if result is not None:
+            return result[0]
+
 
 def server_add_master_skills(master_id: int, skill_id: int):
     """ Серверный слой: Вставляем новый навык мастеру в таблицу MasterSkills """
@@ -109,8 +115,9 @@ def server_add_master_skills(master_id: int, skill_id: int):
 def server_all_table():
     """ Возвращает всю таблицу навыков мастеров."""
     with SESSION() as connect:
-        MastSkillsRep(connect).all_table()
-        connect.commit()
+        results = MastSkillsRep(connect).all_table()
+        x = [result.to_dict() for result in results]
+    return x
     
 def server_insert_skill(category, service):
     """ Добавляем строку в таблицу со всеми навыками """

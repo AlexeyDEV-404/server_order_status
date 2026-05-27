@@ -11,7 +11,8 @@ ROOT_DIRECTORY = BASE_DIR.parent
 DB = BASE_DIR / "DATABASE.db"
 
 driver = "pysqlite"
-url = f"sqlite+{driver}:///{DB}"
+database_url = "sqlite"
+url = f"{database_url}+{driver}:///{DB}"
 
 engine = create_engine(url, echo=True)
 session = sessionmaker(bind=engine)
@@ -33,6 +34,12 @@ class MasterList(BaseClass):
     name : Mapped[BaseClass.string_nullableF]
     status : Mapped[str] = mapped_column(Enum(StatusMasterCheck))
 
+    def to_dict(self):
+        return {
+            "name" : MasterList.name,
+            "status" : MasterList.status
+        }
+
 class MasterSkills(Base):
     __tablename__ = "MasterSkills"
     __table_args__ = (ForeignKeyConstraint((["master_id"]), ["MasterList.id"], ondelete="CASCADE"),
@@ -42,12 +49,25 @@ class MasterSkills(Base):
     master_id : Mapped[int] = mapped_column(nullable=False)
     skill_id : Mapped[int] = mapped_column(nullable=False)
 
+    def to_dict(self):
+        return{
+            "master_id" : self.master_id,
+            "skill_id" : self.skill_id
+        }
+
 class Skills(BaseClass):
     __tablename__ = "Skills"
     __table_args__ = (UniqueConstraint("category", "service"), )
 
     category : Mapped[BaseClass.string]
     service : Mapped[BaseClass.string]
+
+    def to_dict(self):
+        return{
+            "category" : Skills.category,
+            "service" : Skills.service
+        }
+
 
 class Orders(BaseClass):
     __tablename__ = "Orders"
@@ -59,6 +79,18 @@ class Orders(BaseClass):
     master : Mapped[int|None]
     created_at : Mapped[datetime] = mapped_column(server_default=func.now())
     update_at : Mapped[datetime] = mapped_column(onupdate=func.now(), nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "category": self.category,
+            "service": self.service,
+            "description": self.description,
+            "status": self.status,
+            "master": self.master,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "update_at": self.update_at.isoformat() if self.update_at else None
+    }
 
 Base.metadata.create_all(engine)
 

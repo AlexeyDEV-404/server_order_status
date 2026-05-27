@@ -11,9 +11,6 @@ __pycache__/
 
 # VSCode
 .vscode/
-
 .venv
-
 .vscode
-
 .pytest_cache
