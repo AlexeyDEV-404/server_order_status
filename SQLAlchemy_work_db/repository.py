@@ -11,9 +11,9 @@ class MasterListRepository:
         self.session_manag = session_manag
     
     def add(self, name :str, status : StatusMasterCheck | None = None):
-        """ Добавляет в таблицу нового мастера."""
+        """ Добавляет в таблицу нового мастера. Возвращает returning(MasterList.id) через result.scalar_one()"""
         result = self.session_manag.execute(insert(MasterList).values(name=name, status=status).returning(MasterList.id))
-        return result.scalar()
+        return result.scalar_one()
     
     def what_is_the_status(self, id: int):
         """ Отвечает на вопрос, какой статус у мастера? Где параметр метода id - существующего мастера."""
@@ -39,7 +39,7 @@ class MasterSkillsRepository:
         self.session_manag = session_manag
 
     def add_master_skills(self, master_id, skill_id):
-        """ Делает вставку навыка мастера. ID мастера и ID конкретного навыка."""
+        """ Делает вставку навыка мастера. ID мастера и ID конкретного навыка. Возвращает rowcount"""
         return cast(CursorResult, self.session_manag.execute(insert(MasterSkills).values(master_id = master_id, skill_id = skill_id))).rowcount
 
     def all_table(self):
@@ -72,7 +72,7 @@ class OrderRepository:
         self.session_manag = session_manag
 
     
-    def add_order(self, category: str, service: str, description: str, status = StatusOrders.NEW,  master=None):
+    def add_order(self, category: str, service: str, description: str, status = StatusOrders.NEW,  master: int | None = None):
         """ Добавить заказ к таблицу. Возвращает .scalar()"""
         return self.session_manag.execute(insert(Orders).values(category=category, service=service, description = description, status = status,  master = master).returning(Orders.id)).scalar_one()
     
@@ -119,7 +119,7 @@ class SkillsRepository:
 
     def insert_skill(self, category, service):
         """ Добавляем строку в таблицу со всеми навыками """
-        return self.session_manag.execute(insert_dialects(Skills).values(category = category, service = service).on_conflict_do_nothing().returning(Skills.id)).scalar()
+        return self.session_manag.execute(insert_dialects(Skills).values(category = category, service = service).on_conflict_do_nothing().returning(Skills.id)).scalar_one()
     
     def select_works(self):
         """ Делаем запрос к БД и возвращаем список выполняемых работ в виде [("категория", "перечисление, видов, услуг, через, запятую")]. Возвращает .fetchall()"""

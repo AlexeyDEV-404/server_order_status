@@ -15,9 +15,15 @@ database_url = "sqlite"
 url = f"{database_url}+{driver}:///{DB}"
 
 engine = create_engine(url, echo=True)
-session = sessionmaker(bind=engine)
+SessionFactory = sessionmaker(bind=engine)
 
 
+def get_db():
+    session = SessionFactory()
+    try:
+        yield session
+    finally:
+        session.close()
 
 class Base(DeclarativeBase): pass
 class BaseClass(Base):
@@ -81,6 +87,16 @@ class Orders(BaseClass):
     update_at : Mapped[datetime] = mapped_column(onupdate=func.now(), nullable=True)
 
     def to_dict(self):
+        """
+        id": <...>, 
+        "category": <...>,
+        "service": <...>,
+        "description": <...>,
+        "status": <...>,
+        "master": <...>,
+        "created_at": <...>,
+        "update_at: <...>
+        """
         return {
             "id": self.id,
             "category": self.category,
@@ -91,6 +107,3 @@ class Orders(BaseClass):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "update_at": self.update_at.isoformat() if self.update_at else None
     }
-
-Base.metadata.create_all(engine)
-

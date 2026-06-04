@@ -8,7 +8,7 @@ MastListRep = repository.MasterListRepository
 MastSkillsRep = repository.MasterSkillsRepository
 SkillsRepo = repository.SkillsRepository
 
-def test_lifecycle_order(db, add_master, insert_work):
+def test_lifecycle_order(test_db, add_master, insert_work):
     """  
     Создать мастера.
     Создать навык.
@@ -19,7 +19,7 @@ def test_lifecycle_order(db, add_master, insert_work):
     Выполнить заказ.
     Проверить статусы.
     """
-    with db as conn:
+    with test_db as conn:
         MastSkillsRep(conn).add_master_skills(master_id=add_master, skill_id=insert_work)
         order = OrdRep(conn).add_order(category="Сантехника", service = "Ремонт трубы", description="Какое-то описание")
         search0 = OrdRep(conn).specific_order(order).status

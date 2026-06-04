@@ -1,11 +1,8 @@
 from database.doman_rules import rowcount_examinator, chek_fetchone_master_order_count, chek_fetchone_master_order_free
-from SQLAlchemy_work_db import repository, engine_and_models
-from SQLAlchemy_work_db.engine_and_models import Orders 
-
+from SQLAlchemy_work_db import repository
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
-
-
-SESSION = engine_and_models.session
+from fastapi import HTTPException
+from sqlalchemy.orm import Session
 
 OrdRep = repository.OrderRepository
 MastListRep = repository.MasterListRepository
@@ -13,114 +10,137 @@ MastSkillsRep = repository.MasterSkillsRepository
 SkillsRepo = repository.SkillsRepository
 
 
-def server_order_create_new(category: str, service: str,  description: str):
-    with SESSION() as connect:
-        add = OrdRep(connect).add_order(category=category, service=service, description=description, status=StatusOrders.NEW)
-        rowcount_examinator(rowcount=add)
-        connect.commit()
-    return f"Заказ создан и сохранен в базу данных. ID заказа {add}"
 
-def server_order_master_assinged(masterID: int, orderID: int):  
-    with SESSION() as connect:
-        """ Проверяем мастера, закреплен он за выполнением заказа. Проверяем, если статус у мастера BUSY, падаем с ошибкой. Если прошли проверки, меняем статус у заказа на 'ASSINGED'. Закрепляем мастера, за заказом. Меняем статус у мастера на 'BUSY'. Проверяем что изменение внесены, rowcount > 1, если нет, падаем с ошибкой."""
-        check_orders_per_craftsman = OrdRep(connect).master_chek_order_count(master_id=masterID) 
-        chek_fetchone_master_order_count(check_orders_per_craftsman)
-        check_status_per_craftsman = MastListRep(connect).what_is_the_status(id=masterID)
-        chek_fetchone_master_order_free(check_status_per_craftsman)
-        result = OrdRep(connect).assinged_order(order_id=orderID)
-        OrdRep(connect).update_master_order(master_id=masterID, order_id=orderID)
-        update_status_in_db = MastListRep(connect).update_busy_status_master(id=masterID)
-        rowcount_examinator(update_status_in_db)
-        connect.commit()
+def _check_order_exists(db, orderID:int) -> None:
+    """ Проверка существует ли заказ."""
+    order = OrdRep(db).specific_order(orderID)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Ошибка: несуществующий заказ.")
+
+
+def server_order_create_new(category: str, service: str,  description: str, db: Session):
+    """ Создаем новый заказ."""
+    add = OrdRep(db).add_order(category=category, service=service, description=description, status=StatusOrders.NEW)
+    rowcount_examinator(rowcount=add)
+    db.commit()
+    return add
+
+def server_order_master_assinged(masterID: int, orderID: int, db: Session):
+    """ Проверяем мастера, закреплен он за выполнением заказа. Проверяем, если статус у мастера BUSY, падаем с ошибкой. Если прошли проверки, меняем статус у заказа на 'ASSINGED'. Закрепляем мастера, за заказом. Меняем статус у мастера на 'BUSY'. Проверяем что изменение внесены, rowcount > 1, если нет, падаем с ошибкой."""
+    _check_order_exists(db=db, orderID=orderID)
+    check_orders_per_craftsman = OrdRep(db).master_chek_order_count(master_id=masterID) 
+    chek_fetchone_master_order_count(check_orders_per_craftsman)
+    check_status_per_craftsman = MastListRep(db).what_is_the_status(id=masterID)
+    chek_fetchone_master_order_free(check_status_per_craftsman)
+    result = OrdRep(db).assinged_order(order_id=orderID) # Меняем статус заказа 'NEW' -> 'ASSINGED'
+    OrdRep(db).update_master_order(master_id=masterID, order_id=orderID)
+    update_status_in_db = MastListRep(db).update_busy_status_master(id=masterID)
+    rowcount_examinator(update_status_in_db)
+    db.commit()
     return result
 
-def server_order_in_progress(orderID): # Заказ в процессе выполнения
+def server_order_in_progress(orderID, db: Session): # Заказ в процессе выполнения
     """ Переводчи статус заказа с ASSINGED в IN_PROGRESS """
-    with SESSION() as connect:
-        OrdRep(connect).in_progress_orders(order_id=orderID)
-        connect.commit()
+    _check_order_exists(db=db, orderID=orderID)
+    OrdRep(db).in_progress_orders(order_id=orderID)
+    db.commit()
+    return 'Новый статус заказа - "IN PROGRESS".'
 
+def server_order_complet(orderID: int, db: Session): # Перевести заказ в статус "выполнен" (complet)
+    """ Переводим заказ в статус "Выполнено" и освобождаем мастера, переводим его статус с "BUSY" на "FREE"  """
+    _check_order_exists(db=db, orderID=orderID)
+    order = OrdRep(db).complete_order(order_id=orderID)
+    rowcount_examinator(order)
+    ord = OrdRep(db).specific_order(orderID)
+    if ord.master is None:
+        raise HTTPException(status_code=404, detail="Ошибка: недопустимое значение None для поля master в заказе")
+    master = MastListRep(db).update_free_status_master(id=ord.master)
+    rowcount_examinator(master)
+    db.commit()
+    return "Заказ выполнен."
 
-def server_order_complet(masterID: int, orderID: int): # Перевести заказ в статус "выполнен" (complet)
-    with SESSION() as connect:
-        order = OrdRep(connect).complete_order(order_id=orderID)
-        rowcount_examinator(order)
-        master = MastListRep(connect).update_free_status_master(id=masterID)
-        rowcount_examinator(master)
-        connect.commit()
-
-def server_display_master_skills(): # Какими навыками работ обладает мастер
-    with SESSION() as connect:
-        result = MastSkillsRep(connect).informarion_about_craftsmen()
-        
+def server_display_master_skills(db: Session):
+    """ Какими навыками работ обладает мастер. """
+    result = MastSkillsRep(db).informarion_about_craftsmen()     
     return result
 
-def server_specific_order(orderID: int): # Найти указанный заказ № id_order
-    with SESSION() as connect:
-        result = OrdRep(connect).specific_order(order_id = orderID)
-        if result is None:
-            return {"error": f"Заказ с ID {orderID} не найден"}
-        x = result.to_dict()    
+def server_specific_order(orderID: int, db: Session): # Найти указанный заказ № id_order
+    """ Поиск заказа по ID. """
+    result = OrdRep(db).specific_order(order_id = orderID)
+    if result is None:
+        raise HTTPException( status_code = 404, detail = f"Заказ с ID {orderID} не найден")
+    x = result.to_dict()    
     return x
 
-def server_all_orders(): 
-    with SESSION() as connect:
-        orders = OrdRep(connect).all_orders()
-        x = [order.to_dict() for order in orders]
+def server_all_orders(db: Session):
+    """ Показать всю таблицу с заказами. """     
+    orders = OrdRep(db).all_orders()
+    x = [order.to_dict() for order in orders]
     return x
 
-def server_search_master(category, service): 
-    with SESSION() as connect:
-        result = MastSkillsRep(connect).search_master(category=category, service=service)
-        
+def server_search_master(category, service, db: Session):    
+    """ Ищем всех мастеров, которую предостовляют услугу. """ 
+    result = MastSkillsRep(db).search_master(category=category, service=service)       
     return [{"id": r.id, "name": r.name} for r in result]
 
-def server_services(): #Список выполняемых работ
-    with SESSION() as connect:
-        results = SkillsRepo(connect).select_works()
+def server_services(db: Session):
+    """ Список выполняемых работ."""    
+    results = SkillsRepo(db).select_works()
     return [{"category": r[0], "service": r[1].split(", ")} for r in results]
 
-def server_cancel_order(orderID): # Отмена заказа
-    with SESSION() as connect:
-        result = OrdRep(connect).cancel_order(order_id=orderID)
-        connect.commit()
+def server_cancel_order(orderID, db: Session): # Отмена заказа
+    """ Отмена заказа с статусом "NEW". """
+
+    _check_order_exists(db=db, orderID=orderID)
+    order = OrdRep(db).specific_order(orderID)
+    if order.status != StatusOrders.NEW:
+        raise ValueError("Ошибка: отменить можно только заказ с статусом 'NEW'")
+    result = OrdRep(db).cancel_order(order_id=orderID)
+    db.commit()
     return result
 
-def server_delete_order(orderID):
-    with SESSION() as connect:
-        OrdRep(connect).delete_order(orderID)
-        connect.commit()
+def server_delete_order(orderID, db: Session):
+    """ Удаляем заказ по id и взвращаем str-уведомление про успешное удаление этого заказа."""
+    _check_order_exists(db=db, orderID=orderID)
+    order = OrdRep(db).specific_order(orderID)
+    if order:
+        OrdRep(db).delete_order(orderID)
+    else:
+        raise ValueError("Заказа не существует.")
+    db.commit()
+    return f"Заказ с ID {order} удален."
 
-def server_add_master_in_db(name, status: StatusMasterCheck):
+def server_add_master_in_db(name, status: StatusMasterCheck, db: Session):
     """ Добавляет в таблицу нового мастера. """
-    with SESSION() as connect:
-        MastListRep(connect).add(name = name, status = status)
-        connect.commit()
-    return "Мастер добавлен."
+    result = MastListRep(db).add(name = name, status = status)
+    db.commit()
+    return result
 
-def server_master_info(id):
+def server_master_info(id, db: Session):
     """ Возвращает строку про мастера. id должен соответствовать текущему мастеру, который есть в БД."""
-    with SESSION() as connect:
-        result = MastListRep(connect).master_info(id)
-        if result is not None:
-            return result[0]
-
-
-def server_add_master_skills(master_id: int, skill_id: int):
+    result = MastListRep(db).master_info(id)
+    if result is not None:
+        return result[0]
+        
+def server_add_master_skills(master_id: int, skill_id: int, db: Session):
     """ Серверный слой: Вставляем новый навык мастеру в таблицу MasterSkills """
-    with SESSION() as connect:
-        result = MastSkillsRep(connect).add_master_skills(master_id=master_id, skill_id=skill_id)
-        connect.commit()
+    result = MastSkillsRep(db).add_master_skills(master_id=master_id, skill_id=skill_id)
+    db.commit()
+    return f"Навык - {skill_id}, добавлен мастеру - {master_id}."
 
-def server_all_table():
+def server_all_table(db: Session):
     """ Возвращает всю таблицу навыков мастеров."""
-    with SESSION() as connect:
-        results = MastSkillsRep(connect).all_table()
-        x = [result.to_dict() for result in results]
+    results = MastSkillsRep(db).all_table()
+    x = [result.to_dict() for result in results]
     return x
     
-def server_insert_skill(category, service):
+def server_insert_skill(category, service, db: Session):
     """ Добавляем строку в таблицу со всеми навыками """
-    with SESSION() as connect:
-        SkillsRepo(connect).insert_skill(category = category, service = service)
-        connect.commit()
+    try:
+        result = SkillsRepo(db).insert_skill(category = category, service = service)
+        db.commit()
+        return result
+    except Exception as e:
+        db.rollback()
+        f"Ошибка - {e}"
+    
