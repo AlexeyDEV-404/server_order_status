@@ -32,11 +32,11 @@ def test_MastListRep_master_info(test_db, add_master):
 def test_MastListRep_update_free_status_master(test_db, add_master):
     MastListRep(test_db).update_busy_status_master(add_master)
     result = MastListRep(test_db).update_free_status_master(add_master)
-    assert result > 0
+    assert result == StatusMasterCheck.FREE
 
 def test_MastListRep_update_busy_status_master(test_db, add_master):
     result = MastListRep(test_db).update_busy_status_master(add_master)
-    assert result > 0
+    assert result == StatusMasterCheck.BUSY
 
 # _____________MasterListRepository__________end
 # ==============================================================
@@ -59,12 +59,11 @@ def test_SkillsRepo_select_works(test_db, insert_works):
 # _____________MastSkillsRep__________start
 
 def test_MastSkillsRep_add_master_skills(test_db, insert_works, add_master):
-    skills = [1, 2, 5, 14, 9, 8]
-    count = 0
-    for x in skills:
-        result = MastSkillsRep(test_db).add_master_skills(master_id=add_master, skill_id=x)
-        count += result
-    assert count == len(skills)
+    x = 1
+    result = MastSkillsRep(test_db).add_master_skills(master_id=add_master, skill_id=x)
+
+    assert result == MasterSkills
+    assert result.master_id == MasterList
     
 def test_MastSkillsRep_all_table(test_db, insert_works, add_master):
     SkillsRepo(test_db).insert_skill(category="Сантехника", service = "Ремонт трубы")
@@ -99,10 +98,10 @@ def test_MastSkillsRep_informarion_about_craftsmen(test_db, add_master_skills, i
     result = MastSkillsRep(test_db).informarion_about_craftsmen()
     print(result[0])
 
-    assert result[0]["name"] == "Андрей"
-    assert result[0]["category"] == "Сантехника"
-    assert result[0]["service"] == "Ремонт трубы"
-    assert result[0]["status"] == StatusMasterCheck.FREE
+    assert result[0].name == "Андрей"
+    assert result[0].category == "Сантехника"
+    assert result[0].service == "Ремонт трубы"
+    assert result[0].status == StatusMasterCheck.FREE
 
 # _____________MastSkillsRep__________end
 # ==============================================================
@@ -134,29 +133,31 @@ def test_OrdRep_master_chek_order_count(test_db, order_one, add_master):
 
 def test_OrdRep_update_master_order(test_db, order_one, add_master):
     result = OrdRep(test_db).update_master_order(order_id=order_one, master_id=add_master)
+    assert result is not None
     assert result > 0
 
 def test_OrdRep_delete_order(test_db, order_one):
     result = OrdRep(test_db).delete_order(order_one)
+    assert result is not None
     assert result > 0
 
 def test_OrdRep_assinged_order(test_db, order_one):
     result = OrdRep(test_db).assinged_order(order_one)
-
-    assert result > 0 
+    assert result.status == StatusOrders.ASSINGED 
 
 def test_OrdRep_in_progress_orders(test_db, order_one):
     OrdRep(test_db).assinged_order(order_one)
     result = OrdRep(test_db).in_progress_orders(order_one)
     test_db.commit()
-    assert result > 0 
+    assert result.status == StatusOrders.IN_PROGRESS 
 
 def test_OrdRep_complete_order(test_db, order_one):
     OrdRep(test_db).assinged_order(order_one)
     OrdRep(test_db).in_progress_orders(order_one)
     result = OrdRep(test_db).complete_order(order_one)
     test_db.commit()
-    assert result > 0 
+    assert result.id > 0
+    assert result.status == StatusOrders.COMPLETED 
 
 def test_OrdRep_cancel_order(test_db, order_one):
     result = OrdRep(test_db).cancel_order(order_one)

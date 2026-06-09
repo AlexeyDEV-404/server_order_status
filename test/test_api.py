@@ -1,7 +1,8 @@
+from pathlib import Path
 import pytest
 
 # pytest test/test_api.py -v
-# pytest test/test_api.py::test_assinged -v
+# pytest test/test_api.py::test_new_order -v -s
 
 @pytest.fixture
 def new_order(Create_Session_Factory):
@@ -48,7 +49,7 @@ def test_cancel(Create_Session_Factory, new_order):
 
 def test_delete_order(Create_Session_Factory, new_order):
     response = Create_Session_Factory.post(f"/user/order/{new_order.json()}/delete")
-    assert "Заказ с ID" in response.json() 
+    assert response > 0
 
 def test_add_master_skills(Create_Session_Factory):
     response = Create_Session_Factory.post("/user/insert_skill", params={"category":"Электрика", "service": "Ремонт электрощитка"})

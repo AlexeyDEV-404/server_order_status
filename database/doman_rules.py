@@ -1,3 +1,4 @@
+from SQLAlchemy_work_db.enusm import StatusMasterCheck
 
 def rowcount_examinator(rowcount):
     if rowcount >= 1:
@@ -6,7 +7,7 @@ def rowcount_examinator(rowcount):
 
 def free_status_master_examination_0(data):
     x = data[0]
-    if x == "FREE":
+    if x == StatusMasterCheck.FREE:
         return x
     raise ValueError(f"Текущий статус: {x}")
 
@@ -21,7 +22,7 @@ def chek_fetchone_master_order_count(fetchone : int): # работает с mast
         raise ValueError("Ошибка: Мастере занят и не может быть назначен на заказ.")  
     
 def chek_fetchone_master_order_free(fetchone: str):
-    if fetchone == "BUSY":
+    if fetchone == StatusMasterCheck.BUSY:
         raise ValueError("Мастер занят и не может принять заказ.")
  
 

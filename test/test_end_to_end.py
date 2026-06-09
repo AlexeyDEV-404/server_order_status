@@ -28,15 +28,15 @@ def test_lifecycle_order(test_db, add_master, insert_work):
         search_by_skil = MastSkillsRep(conn).search_master(category="Сантехника", service = "Ремонт трубы")
         OrdRep(conn).update_master_order(master_id=search_by_skil[0].id, order_id=order)
         ord2 = OrdRep(conn).assinged_order(order)
-        search1 = OrdRep(conn).specific_order(ord2).status
+        search1 = OrdRep(conn).specific_order(ord2.id).status
         if search1 != StatusOrders.ASSINGED:
             raise Exception("Ошибка при обновлении статуса заказа с NEW на ASSINGED")
         ord3 = OrdRep(conn).in_progress_orders(order)
-        search2 = OrdRep(conn).specific_order(ord3).status
+        search2 = OrdRep(conn).specific_order(ord3.status).status
         if search2 != StatusOrders.IN_PROGRESS:
             raise Exception("Ошибка при обновлении статуса заказа с ASSINGED на на IN_PROGRESS")
         ord4 = OrdRep(conn).complete_order(order)
-        search3 = OrdRep(conn).specific_order(ord4).status
+        search3 = OrdRep(conn).specific_order(ord4.status).status
         if search3 != StatusOrders.COMPLETED:
             raise Exception("Ошибка при обновлении статуса заказа с IN_PROGRESS в COMPLETED")
         conn.commit()

@@ -4,6 +4,7 @@ from SQLAlchemy_work_db.engine_and_models import get_db, Base
 from fastapi.testclient import TestClient
 
 from sqlalchemy import create_engine
+from sqlalchemy import StaticPool
 from sqlalchemy.orm import sessionmaker
 from SQLAlchemy_work_db.enusm import StatusOrders, StatusMasterCheck
 
@@ -19,7 +20,10 @@ SkillsRepo = repository.SkillsRepository
 
 @pytest.fixture
 def Create_Session_Factory():
-    engine = create_engine("sqlite:///test/test.db")
+    # url = "sqlite:///test/test.db"
+    url = "sqlite:///:memory:"
+    engine = create_engine(url,connect_args={"check_same_thread": False},
+        poolclass=StaticPool)
     SessionLocalFactory = sessionmaker(bind=engine)
     Base.metadata.create_all(engine)
     

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
 
 
@@ -13,4 +13,37 @@ class UserInput(BaseModel):
 class AssingMaster(BaseModel):
     masterID: int
 
+class TableMasterList(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name: str
+    status: str
+
+class TableMasterSkills(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    master_id : int
+    skill_id : int
+
+class TableSkills(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    category: str
+    service: str
     
+class TableOrders(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    category: str
+    service: str
+    description: str
+    status: str
+    master: int | None
+
+class TableInfAboutCraftsmen(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    name : str
+    category : str
+    service : str
+    status : str

@@ -42,8 +42,8 @@ class MasterList(BaseClass):
 
     def to_dict(self):
         return {
-            "name" : MasterList.name,
-            "status" : MasterList.status
+            "name" : self.name,
+            "status" : self.status
         }
 
 class MasterSkills(Base):
@@ -70,8 +70,8 @@ class Skills(BaseClass):
 
     def to_dict(self):
         return{
-            "category" : Skills.category,
-            "service" : Skills.service
+            "category" : self.category,
+            "service" : self.service
         }
 
 
