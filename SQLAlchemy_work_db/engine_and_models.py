@@ -19,12 +19,12 @@ SessionFactory = sessionmaker(bind=engine)
 
 
 def get_db():
-    session = SessionFactory()
-    try:
+    with SessionFactory() as session:
         yield session
-    finally:
-        session.close()
+    
 
+
+    
 class Base(DeclarativeBase): pass
 class BaseClass(Base):
     __abstract__ = True
@@ -40,11 +40,6 @@ class MasterList(BaseClass):
     name : Mapped[BaseClass.string_nullableF]
     status : Mapped[str] = mapped_column(Enum(StatusMasterCheck))
 
-    def to_dict(self):
-        return {
-            "name" : self.name,
-            "status" : self.status
-        }
 
 class MasterSkills(Base):
     __tablename__ = "MasterSkills"
@@ -55,24 +50,12 @@ class MasterSkills(Base):
     master_id : Mapped[int] = mapped_column(nullable=False)
     skill_id : Mapped[int] = mapped_column(nullable=False)
 
-    def to_dict(self):
-        return{
-            "master_id" : self.master_id,
-            "skill_id" : self.skill_id
-        }
-
 class Skills(BaseClass):
     __tablename__ = "Skills"
     __table_args__ = (UniqueConstraint("category", "service"), )
 
     category : Mapped[BaseClass.string]
     service : Mapped[BaseClass.string]
-
-    def to_dict(self):
-        return{
-            "category" : self.category,
-            "service" : self.service
-        }
 
 
 class Orders(BaseClass):
@@ -85,25 +68,3 @@ class Orders(BaseClass):
     master : Mapped[int|None]
     created_at : Mapped[datetime] = mapped_column(server_default=func.now())
     update_at : Mapped[datetime] = mapped_column(onupdate=func.now(), nullable=True)
-
-    def to_dict(self):
-        """
-        id": <...>, 
-        "category": <...>,
-        "service": <...>,
-        "description": <...>,
-        "status": <...>,
-        "master": <...>,
-        "created_at": <...>,
-        "update_at: <...>
-        """
-        return {
-            "id": self.id,
-            "category": self.category,
-            "service": self.service,
-            "description": self.description,
-            "status": self.status,
-            "master": self.master,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "update_at": self.update_at.isoformat() if self.update_at else None
-    }

@@ -62,8 +62,8 @@ def test_MastSkillsRep_add_master_skills(test_db, insert_works, add_master):
     x = 1
     result = MastSkillsRep(test_db).add_master_skills(master_id=add_master, skill_id=x)
 
-    assert result == MasterSkills
-    assert result.master_id == MasterList
+    assert result.skill_id > 0
+    assert result.master_id > 0
     
 def test_MastSkillsRep_all_table(test_db, insert_works, add_master):
     SkillsRepo(test_db).insert_skill(category="Сантехника", service = "Ремонт трубы")
@@ -75,6 +75,7 @@ def test_MastSkillsRep_all_table(test_db, insert_works, add_master):
     print(type(result))
     print(type(result[0]))
     print(result[0].master_id)
+
     assert result[0].master_id > 0
 
 

@@ -32,11 +32,11 @@ def test_lifecycle_order(test_db, add_master, insert_work):
         if search1 != StatusOrders.ASSINGED:
             raise Exception("Ошибка при обновлении статуса заказа с NEW на ASSINGED")
         ord3 = OrdRep(conn).in_progress_orders(order)
-        search2 = OrdRep(conn).specific_order(ord3.status).status
+        search2 = OrdRep(conn).specific_order(ord3.id).status
         if search2 != StatusOrders.IN_PROGRESS:
             raise Exception("Ошибка при обновлении статуса заказа с ASSINGED на на IN_PROGRESS")
         ord4 = OrdRep(conn).complete_order(order)
-        search3 = OrdRep(conn).specific_order(ord4.status).status
+        search3 = OrdRep(conn).specific_order(ord4.id).status
         if search3 != StatusOrders.COMPLETED:
             raise Exception("Ошибка при обновлении статуса заказа с IN_PROGRESS в COMPLETED")
         conn.commit()

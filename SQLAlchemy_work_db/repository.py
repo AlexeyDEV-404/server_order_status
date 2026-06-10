@@ -108,7 +108,7 @@ class OrderRepository:
 
     def complete_order(self, order_id: int) -> Orders:
         """ Переводчи статус заказа с IN_PROGRESS в COMPLETED. Возвращает .rowcount()"""
-        return self.session_manag.execute(update(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id))).scalar_one()
+        return self.session_manag.execute(update(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id)).returning(Orders)).scalar_one()
 
     def cancel_order(self, order_id: int) -> Orders:
         """ Переводчи статус заказа с NEW в  CANCEL """
