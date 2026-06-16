@@ -1,27 +1,32 @@
-from sqlalchemy import create_engine, String, Enum, ForeignKeyConstraint, UniqueConstraint, PrimaryKeyConstraint, func
-from sqlalchemy.orm import DeclarativeBase, sessionmaker, mapped_column, Mapped
+from sqlalchemy import (create_engine, String, Enum, ForeignKeyConstraint, UniqueConstraint, PrimaryKeyConstraint, func)
+from sqlalchemy.orm import (DeclarativeBase, sessionmaker, mapped_column, Mapped, relationship)
+from sqlalchemy.ext.asyncio import (create_async_engine, async_sessionmaker)
+
 from pathlib import Path
 from typing import Annotated
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
 from datetime import datetime
 
-
 BASE_DIR = Path(__file__).resolve().parents[0]
 ROOT_DIRECTORY = BASE_DIR.parent
 DB = BASE_DIR / "DATABASE.db"
 
-driver = "pysqlite"
-database_url = "sqlite"
-url = f"{database_url}+{driver}:///{DB}"
+driver = "asyncpg"
+database_url = "postgresql"
+url = f"{database_url}+{driver}://postgres:admin@localhost:5432/SOM"
 
-engine = create_engine(url, echo=True)
-SessionFactory = sessionmaker(bind=engine)
+engine = create_async_engine(url, pool_size = 5, max_overflow = 10, pool_timeout = 60, pool_pre_ping=True, echo=True)
+AsyncSessionFactory = async_sessionmaker(bind=engine)
 
 
-def get_db():
-    with SessionFactory() as session:
-        yield session
-    
+async def get_db():
+    async with AsyncSessionFactory() as session:
+        try:
+            yield session
+        except Exception:
+            await session.rollback()
+            raise
+        
 
 
     
@@ -50,9 +55,11 @@ class MasterSkills(Base):
     master_id : Mapped[int] = mapped_column(nullable=False)
     skill_id : Mapped[int] = mapped_column(nullable=False)
 
+    
+
 class Skills(BaseClass):
     __tablename__ = "Skills"
-    __table_args__ = (UniqueConstraint("category", "service"), )
+    __table_args__ = (UniqueConstraint("category", "service"),)
 
     category : Mapped[BaseClass.string]
     service : Mapped[BaseClass.string]
