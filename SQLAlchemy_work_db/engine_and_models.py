@@ -19,7 +19,7 @@ engine = create_async_engine(url, pool_size = 5, max_overflow = 10, pool_timeout
 AsyncSessionFactory = async_sessionmaker(bind=engine)
 
 
-async def get_db():
+async def async_get_db():
     async with AsyncSessionFactory() as session:
         try:
             yield session
@@ -55,7 +55,6 @@ class MasterSkills(Base):
     master_id : Mapped[int] = mapped_column(nullable=False)
     skill_id : Mapped[int] = mapped_column(nullable=False)
 
-    
 
 class Skills(BaseClass):
     __tablename__ = "Skills"

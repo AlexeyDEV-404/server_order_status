@@ -31,12 +31,12 @@ async def test_lifecycle_order(test_db, add_master, insert_work):
         search1 = (await OrdRep(conn).specific_order(ord2.id)).status
         if search1 != StatusOrders.ASSINGED:
             raise Exception("Ошибка при обновлении статуса заказа с NEW на ASSINGED")
-        ord3 = await OrdRep(conn).in_progress_orders(order)
-        search2 = (await OrdRep(conn).specific_order(ord3.id)).status
+        ord3 = OrdRep(conn).in_progress_orders(order)
+        search2 = OrdRep(conn).specific_order(ord3.id).status
         if search2 != StatusOrders.IN_PROGRESS:
             raise Exception("Ошибка при обновлении статуса заказа с ASSINGED на на IN_PROGRESS")
-        ord4 = await OrdRep(conn).complete_order(order)
-        search3 = (await OrdRep(conn).specific_order(ord4.id)).status
+        ord4 = OrdRep(conn).complete_order(order)
+        search3 = OrdRep(conn).specific_order(ord4.id).status
         if search3 != StatusOrders.COMPLETED:
             raise Exception("Ошибка при обновлении статуса заказа с IN_PROGRESS в COMPLETED")
         await conn.commit()

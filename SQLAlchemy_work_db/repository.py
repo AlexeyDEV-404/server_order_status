@@ -124,8 +124,7 @@ class OrderRepository:
 
     async def complete_order(self, order_id: int) -> Orders:
         """ Переводчи статус заказа с IN_PROGRESS в COMPLETED. Возвращает .rowcount()"""
-        result = await self.session_manag.execute(update(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id)).returning(Orders))
-        return result.scalar_one()
+        return self.session_manag.execute(update(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id)).returning(Orders)).scalar_one()
 
     async def cancel_order(self, order_id: int) -> Orders:
         """ Переводчи статус заказа с NEW в  CANCEL """

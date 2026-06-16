@@ -122,5 +122,3 @@ pytest test/test_api.py -v
 # E2E
 pytest test/test_end_to_end.py -v
 ```
-
-Тесты используют `sqlite:///:memory:` со `StaticPool` — база поднимается и удаляется для каждого теста, зависимость `get_db` подменяется через `dependency_overrides`.
