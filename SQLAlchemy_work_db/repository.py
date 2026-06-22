@@ -1,12 +1,17 @@
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sqlalchemy import select, insert, update, delete, and_, func
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.dialects.postgresql import insert as insert_dialects
+
 from SQLAlchemy_work_db.engine_and_models import MasterList, MasterSkills, Skills, Orders
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
-from sqlalchemy.engine import CursorResult
+
+from SQLAlchemy_work_db.DTO import OrdersDTO
+from app.api.pydantic_ import (TableMasterSkills, TableOrders)
 from app.api.pydantic_ import TableInfAboutCraftsmen
-from typing import cast
 
 class MasterListRepository:
     def __init__(self, session_manag : AsyncSession):
@@ -44,10 +49,10 @@ class MasterSkillsRepository:
     def __init__(self, session_manag : AsyncSession):
         self.session_manag = session_manag
 
-    async def add_master_skills(self, master_id, skill_id) -> MasterSkills:
+    async def add_master_skills(self, master_id: int, skill_id: int):
         """ Делает вставку навыка мастера. ID мастера и ID конкретного навыка. Возвращает rowcount"""
         result = await self.session_manag.execute(insert(MasterSkills).values(master_id = master_id, skill_id = skill_id).returning(MasterSkills.master_id, MasterSkills.skill_id))
-        return result.scalar_one()
+        return result.mappings().first()
 
 
     async def all_table(self):
@@ -96,7 +101,8 @@ class OrderRepository:
     async def specific_order(self, order_id):
         """ Показать конкретную строку (заказ) из таблицы. Возвращает .scalar_one()"""
         result = await self.session_manag.execute(select(Orders).where(Orders.id == order_id))
-        return result.scalar_one()
+        order = result.scalar_one()
+        return TableOrders.model_validate(order)
     
     async def master_chek_order_count(self, master_id):
         """ Возвращает скалярное значение int, всех заказов со статусом IN_PROGRESS у мастера. Возвращает .scalar_one()"""
@@ -105,30 +111,36 @@ class OrderRepository:
     
     async def update_master_order(self, master_id: int, order_id: int) -> int|None:
         """ Зарепить за заказом, мастера. Возвращает id мастера из заказа, что бы убедится что мастер назначен. """
-        return cast(CursorResult, await self.session_manag.execute(update(Orders).values(master = master_id).where(Orders.id == order_id).returning(Orders.master))).scalar()
+        return (await self.session_manag.execute(update(Orders).values(master = master_id).where(Orders.id == order_id).returning(Orders.master))).scalar()
     
     async def delete_order(self, id) -> int|None:
         """ Удаляем заказ из базы данных. Возвращает """
         result = await self.session_manag.execute((delete(Orders).where(Orders.id == id).returning(Orders.id)))
         return result.scalar()
     
-    async def assinged_order(self, order_id: int) -> Orders:
+    # Временное решение отколючить возврат
+    async def assinged_order(self, order_id: int):
         """Меняем статус заказа на - 'ASSINGED', у которого статус заказа - 'NEW'. Возвращает status"""
-        result = await self.session_manag.execute(update(Orders).values(status = StatusOrders.ASSINGED).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)).returning(Orders))
-        return result.scalar_one()
+        response = await self.session_manag.execute(update(Orders).returning(Orders).values(status = StatusOrders.ASSINGED).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)))
+        result = response.scalars().first()
+        return TableOrders.model_validate(result)
 
-    async def in_progress_orders(self, order_id: int) -> Orders:
-        """ Переводчи статус заказа с ASSINGED на IN_PROGRESS. Возвращает .rowcount()"""
-        result = await self.session_manag.execute(update(Orders).values(status = StatusOrders.IN_PROGRESS).where(and_(Orders.status == StatusOrders.ASSINGED, Orders.id == order_id)).returning(Orders))
-        return result.scalar_one()
-
-    async def complete_order(self, order_id: int) -> Orders:
+    async def in_progress_orders(self, order_id: int):
+        """ Переводчи статус заказа с ASSINGED на IN_PROGRESS."""
+        response = await self.session_manag.execute(update(Orders).returning(Orders).values(status = StatusOrders.IN_PROGRESS).where(and_(Orders.status == StatusOrders.ASSINGED, Orders.id == order_id)))
+        result = response.scalars().first()
+        return TableOrders.model_validate(result)
+    
+    async def complete_order(self, order_id: int):
         """ Переводчи статус заказа с IN_PROGRESS в COMPLETED. Возвращает .rowcount()"""
-        return self.session_manag.execute(update(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id)).returning(Orders)).scalar_one()
-
-    async def cancel_order(self, order_id: int) -> Orders:
+        response = (await self.session_manag.execute(update(Orders).returning(Orders).values(status = StatusOrders.COMPLETED).where(and_(Orders.status == StatusOrders.IN_PROGRESS, Orders.id == order_id)))).scalars().first()
+        if response is None:
+            return None
+        return TableOrders.model_validate(response)
+    
+    async def cancel_order(self, order_id: int) -> str:
         """ Переводчи статус заказа с NEW в  CANCEL """
-        return cast(CursorResult, await self.session_manag.execute(update(Orders).values(status = StatusOrders.CANCEL).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)).returning(Orders.status))).scalar_one()
+        return (await self.session_manag.execute(update(Orders).values(status = StatusOrders.CANCEL).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)).returning(Orders.status))).scalar_one()
 
 class SkillsRepository:
     def __init__(self, session_manag : AsyncSession):
@@ -141,7 +153,7 @@ class SkillsRepository:
     
     async def select_works(self):
         """ Делаем запрос к БД и возвращаем список выполняемых работ в виде [("категория", "перечисление, видов, услуг, через, запятую")]. Возвращает .fetchall()"""
-        result = await self.session_manag.execute(select(Skills.category, func.group_concat(Skills.service, ', ')).group_by(Skills.category))
+        result = await self.session_manag.execute(select(Skills.category, func.string_agg(Skills.service, ', ')).group_by(Skills.category))
         return result.all()
 
     

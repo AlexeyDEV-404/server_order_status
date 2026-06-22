@@ -1,10 +1,10 @@
 from SQLAlchemy_work_db import repository
-from SQLAlchemy_work_db.engine_and_models import get_db, Base
+from SQLAlchemy_work_db.engine_and_models import async_get_db, Base
 
 from fastapi.testclient import TestClient
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy import StaticPool
 from SQLAlchemy_work_db.enusm import StatusOrders, StatusMasterCheck
 
@@ -33,11 +33,13 @@ async def Create_Session_Factory():
         async with AsuncSessionLocalFactory() as db:
             yield db
 
-    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[async_get_db] = override_get_db
 
-    yield TestClient(app)
-    async with engine.connect() as conn:
-        await conn.run_sync(Base.metadata.drop_all)   
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        yield client
+        async with engine.connect() as conn:
+            await conn.run_sync(Base.metadata.drop_all)   
 
 @pytest.fixture(scope="function")
 async def test_engine(): 
@@ -92,7 +94,7 @@ async def insert_works(test_db):
     for key, value in categories_services.items():
         for x in value:
             await SkillsRepo(test_db).insert_skill(key, x)
-    test_db.commit()
+    await test_db.commit()
 
 @pytest.fixture
 async def insert_work(test_db):

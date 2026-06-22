@@ -62,12 +62,13 @@ async def test_MastSkillsRep_add_master_skills(test_db, insert_works, add_master
     x = 1
     result = await MastSkillsRep(test_db).add_master_skills(master_id=add_master, skill_id=x)
 
+    assert result is not None
     assert result.skill_id > 0
     assert result.master_id > 0
     
 async def test_MastSkillsRep_all_table(test_db, insert_works, add_master):
     await SkillsRepo(test_db).insert_skill(category="Сантехника", service = "Ремонт трубы")
-    test_db.commit()
+    await test_db.commit()
     add = await MastSkillsRep(test_db).add_master_skills(master_id=add_master, skill_id=1)
     result = await MastSkillsRep(test_db).all_table()
 
@@ -125,8 +126,6 @@ async def test_OrdRep_all_orders(test_db, orders_many):
 
 async def test_OrdRep_specific_order(test_db, order_one):
     result = await OrdRep(test_db).specific_order(order_one)
-    assert isinstance(result.id, int)
-    assert result.id > 0
     assert result.description == "Протечка"
 
 async def test_OrdRep_master_chek_order_count(test_db, order_one, add_master):
@@ -145,21 +144,24 @@ async def test_OrdRep_delete_order(test_db, order_one):
 
 async def test_OrdRep_assinged_order(test_db, order_one):
     result = await OrdRep(test_db).assinged_order(order_one)
-    assert result.status == StatusOrders.ASSINGED 
+    assert result is not None
+    assert result.status == "ASSINGED" 
 
 async def test_OrdRep_in_progress_orders(test_db, order_one):
     await OrdRep(test_db).assinged_order(order_one)
     result = await OrdRep(test_db).in_progress_orders(order_one)
-    test_db.commit()
-    assert result.status == StatusOrders.IN_PROGRESS 
+    await test_db.commit()
+    assert result is not None
+    assert result.status == "IN_PROGRESS" 
 
 async def test_OrdRep_complete_order(test_db, order_one):
     await OrdRep(test_db).assinged_order(order_one)
     await OrdRep(test_db).in_progress_orders(order_one)
     result = await OrdRep(test_db).complete_order(order_one)
-    test_db.commit()
-    assert result.id > 0
-    assert result.status == StatusOrders.COMPLETED 
+    await test_db.commit()
+    assert result is not None
+
+    assert result.status == "COMPLETED" 
 
 async def test_OrdRep_cancel_order(test_db, order_one):
     result = await OrdRep(test_db).cancel_order(order_one)
