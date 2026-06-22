@@ -1,7 +1,7 @@
 import pytest
 #  НЕ РАБОЧИЙ КОД!!!
 # pytest test/test_api.py -v
-# pytest test/test_api.py::test_order_list -v -s
+# pytest test/test_end_to_end.py -v -s
 
 @pytest.fixture
 async def new_order(Create_Session_Factory):

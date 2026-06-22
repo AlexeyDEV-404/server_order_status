@@ -45,7 +45,7 @@ async def server_order_master_assinged(masterID: int, orderID: int, db: AsyncSes
         await db.rollback()
         raise ValueError(f"Ошибка: полученное значение {update_status_in_db} не соответствует ожидаемому {StatusMasterCheck.BUSY}.")
     await db.commit()
-    return result
+    return TableOrders.model_validate(result)
 
 async def server_order_in_progress(orderID, db: AsyncSession): # Заказ в процессе выполнения
     """ Переводчи статус заказа с ASSINGED в IN_PROGRESS. """
