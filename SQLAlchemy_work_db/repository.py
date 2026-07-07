@@ -1,15 +1,11 @@
-from datetime import datetime
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import select, insert, update, delete, and_, func
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import Row, Sequence, select, insert, update, delete, and_, func
 from sqlalchemy.dialects.postgresql import insert as insert_dialects
 
 from SQLAlchemy_work_db.engine_and_models import MasterList, MasterSkills, Skills, Orders
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
 
-from SQLAlchemy_work_db.DTO import OrdersDTO
 from app.api.pydantic_ import (TableMasterSkills, TableOrders)
 from app.api.pydantic_ import TableInfAboutCraftsmen
 
@@ -17,12 +13,12 @@ class MasterListRepository:
     def __init__(self, session_manag : AsyncSession):
         self.session_manag = session_manag
     
-    async def add(self, name :str, status : StatusMasterCheck | None = None):
+    async def add(self, name :str, status : StatusMasterCheck | None = None) -> int|None:
         """ Добавляет в таблицу нового мастера. Возвращает returning(MasterList.id) через result.scalar_one()"""
         result = await self.session_manag.execute(insert(MasterList).values(name=name, status=status).returning(MasterList.id))
         return result.scalar()
     
-    async def what_is_the_status(self, id: int):
+    async def what_is_the_status(self, id: int) -> str:
         """ Отвечает на вопрос, какой статус у мастера? Где параметр метода id - существующего мастера."""
         result = await self.session_manag.execute(select(MasterList.status).where(MasterList.id == id))
         return result.scalar_one()
@@ -39,7 +35,7 @@ class MasterListRepository:
 
     async def update_busy_status_master(self, id: int) -> str:
         """ Смена статуса мастера с  FREE на BUSY.
-            возвращает .returning(MasterList.status)
+            возвращает строку str через - returning(MasterList.status)
             выполняет return result.scalar_one()
         """
         result = await self.session_manag.execute(update(MasterList).where(and_(MasterList.status == StatusMasterCheck.FREE, MasterList.id == id)).values(status = StatusMasterCheck.BUSY).returning(MasterList.status))
@@ -88,8 +84,8 @@ class OrderRepository:
         self.session_manag = session_manag
 
     
-    async def add_order(self, category: str, service: str, description: str, status = StatusOrders.NEW,  master: int | None = None):
-        """ Добавить заказ к таблицу. Возвращает .scalar()"""
+    async def add_order(self, category: str, service: str, description: str, status = StatusOrders.NEW,  master: int | None = None) -> int:
+        """ Возвращаем из таблицы заказов Order идентификационный номер заказа (id), тип возвращаемого значения integer. """
         result = await self.session_manag.execute(insert(Orders).values(category=category, service=service, description = description, status = status,  master = master).returning(Orders.id))
         return result.scalar_one()
     
@@ -98,13 +94,13 @@ class OrderRepository:
         result = await self.session_manag.execute(select(Orders))
         return result.scalars().all()
     
-    async def specific_order(self, order_id):
-        """ Показать конкретную строку (заказ) из таблицы. Возвращает .scalar_one()"""
+    async def specific_order(self, order_id) -> TableOrders:
+        """ Показать конкретную строку (заказ) из таблицы. Возвращает .scalar_one() и валирует данные через TableOrders.model_validate"""
         result = await self.session_manag.execute(select(Orders).where(Orders.id == order_id))
         order = result.scalar_one()
         return TableOrders.model_validate(order)
     
-    async def master_chek_order_count(self, master_id):
+    async def master_chek_order_count(self, master_id) -> int:
         """ Возвращает скалярное значение int, всех заказов со статусом IN_PROGRESS у мастера. Возвращает .scalar_one()"""
         result = await self.session_manag.execute(select(func.count(Orders.id)).where(and_(Orders.master == master_id, Orders.status == StatusOrders.IN_PROGRESS)))
         return result.scalar_one()
@@ -113,13 +109,13 @@ class OrderRepository:
         """ Зарепить за заказом, мастера. Возвращает id мастера из заказа, что бы убедится что мастер назначен. """
         return (await self.session_manag.execute(update(Orders).values(master = master_id).where(Orders.id == order_id).returning(Orders.master))).scalar()
     
-    async def delete_order(self, id) -> int|None:
+    async def delete_order(self, id) -> int:
         """ Удаляем заказ из базы данных. Возвращает """
         result = await self.session_manag.execute((delete(Orders).where(Orders.id == id).returning(Orders.id)))
-        return result.scalar()
+        return result.scalar_one()
     
     # Временное решение отколючить возврат
-    async def assinged_order(self, order_id: int):
+    async def assinged_order(self, order_id: int) -> TableOrders:
         """Меняем статус заказа на - 'ASSINGED', у которого статус заказа - 'NEW'. Возвращает status"""
         response = await self.session_manag.execute(update(Orders).returning(Orders).values(status = StatusOrders.ASSINGED).where(and_(Orders.status == StatusOrders.NEW, Orders.id == order_id)))
         result = response.scalars().first()

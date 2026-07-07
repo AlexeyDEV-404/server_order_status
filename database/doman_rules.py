@@ -11,11 +11,14 @@ def chek_select_fetchone(fetchone):
         raise ValueError("Мастера не существует")
     return fetchone
         
-def chek_value_master_order_free(value: str):
-    if value == StatusMasterCheck.BUSY:
-        raise ValueError("Мастер занят и не может принять заказ.")
- 
-
+def chek_value_master_order_free(value: str|int):
+    isinstance(value, str)
+    if isinstance(value, str):
+        if value == "BUSY":
+            raise ValueError("Статус мастера BUSY (занят) и не может принять заказ.")
+    elif isinstance(value, int):
+        if value > 0:
+            raise ValueError("Мастер выполняет заказ и не может быть назначен на другой.")
 
 
 

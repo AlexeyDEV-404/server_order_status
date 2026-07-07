@@ -1,11 +1,13 @@
-from sqlalchemy import (create_engine, String, Enum, ForeignKeyConstraint, UniqueConstraint, PrimaryKeyConstraint, func)
-from sqlalchemy.orm import (DeclarativeBase, sessionmaker, mapped_column, Mapped, relationship)
+from sqlalchemy import (String, Enum, ForeignKeyConstraint, UniqueConstraint, PrimaryKeyConstraint, func)
+from sqlalchemy.orm import (DeclarativeBase, mapped_column, Mapped)
 from sqlalchemy.ext.asyncio import (create_async_engine, async_sessionmaker)
 
 from pathlib import Path
 from typing import Annotated
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
 from datetime import datetime
+
+
 
 BASE_DIR = Path(__file__).resolve().parents[0]
 ROOT_DIRECTORY = BASE_DIR.parent
@@ -17,17 +19,6 @@ url = f"{database_url}+{driver}://postgres:admin@localhost:5432/SOM"
 
 engine = create_async_engine(url, pool_size = 5, max_overflow = 10, pool_timeout = 60, pool_pre_ping=True, echo=True)
 AsyncSessionFactory = async_sessionmaker(bind=engine)
-
-
-async def async_get_db():
-    async with AsyncSessionFactory() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
-        
-
 
     
 class Base(DeclarativeBase): pass

@@ -1,5 +1,5 @@
 # pytest -s test\test_sqlalchemy.py -v
-# pytest test\test_sqlalchemy.py::test_MastSkillsRep_master_skills -v -s
+# pytest test\test_sqlalchemy.py::test_MastSkillsRep_informarion_about_craftsmen -v -s
 
 from SQLAlchemy_work_db import repository
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
@@ -99,7 +99,7 @@ async def test_MastSkillsRep_search_master(test_db, add_master):
 async def test_MastSkillsRep_informarion_about_craftsmen(test_db, add_master_skills, insert_work):
     result = await MastSkillsRep(test_db).informarion_about_craftsmen()
     
-    print(result[0])
+    print(result[0], result)
 
     assert result[0].name == "Андрей"
     assert result[0].category == "Сантехника"

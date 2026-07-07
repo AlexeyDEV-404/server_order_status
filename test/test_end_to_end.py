@@ -1,6 +1,4 @@
 from SQLAlchemy_work_db import repository
-from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
-from SQLAlchemy_work_db.engine_and_models import MasterList, MasterSkills, Skills, Orders
 
 
 OrdRep = repository.OrderRepository
@@ -45,6 +43,4 @@ async def test_lifecycle_order(test_db, add_master, insert_work):
     assert search1.status == "ASSINGED"
     assert search2.status == "IN_PROGRESS"
     assert search3.status == "COMPLETED"
-
-
 

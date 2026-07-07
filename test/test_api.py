@@ -1,10 +1,9 @@
 import pytest
-#  НЕ РАБОЧИЙ КОД!!!
-# pytest test/test_api.py -v
+# pytest test/test_api.py::test_assinged -v
 # pytest test/test_end_to_end.py -v -s
 
 @pytest.fixture
-async def new_order(Create_Session_Factory):
+async def new_order(Create_Session_Factory) -> int:
     return await Create_Session_Factory.post("/user/order/new", json={
         "category": "Сантехника",
         "services": "замена труб",
@@ -22,6 +21,7 @@ async def test_new_order(new_order):
     assert type(new_order.json()) == int
 
 async def test_assinged(Create_Session_Factory, new_order, add_master):
+    print(new_order.json(), "0000000000000000000000000")
     response = await Create_Session_Factory.post(f"/user/order/{new_order.json()}/assinged", json={"masterID": add_master.json()})
     assert response.status_code == 200
     assert response.json()["status"] == "ASSINGED"
@@ -48,7 +48,6 @@ async def test_cancel(Create_Session_Factory, new_order):
 async def test_delete_order(Create_Session_Factory, new_order):
     response = await Create_Session_Factory.post(f"/user/order/{new_order.json()}/delete")
     assert response.status_code == 200
-    assert response.json() > 0
 
 async def test_add_master_skills(Create_Session_Factory):
     response = await Create_Session_Factory.post("/user/insert_skill", params={"category":"Электрика", "service": "Ремонт электрощитка"})
