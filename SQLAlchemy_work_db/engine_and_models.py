@@ -4,19 +4,14 @@ from sqlalchemy.orm import (DeclarativeBase, mapped_column,
                             Mapped, relationship)
 from sqlalchemy.ext.asyncio import (create_async_engine, async_sessionmaker)
 
-from pathlib import Path
+from config import settings
+
 from typing import Annotated, List
 from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
 from datetime import datetime
 
 
-BASE_DIR = Path(__file__).resolve().parents[0]
-ROOT_DIRECTORY = BASE_DIR.parent
-DB = BASE_DIR / "DATABASE.db"
-
-driver = "asyncpg"
-database_url = "postgresql"
-url = f"{database_url}+{driver}://postgres:admin@localhost:5432/SOM"
+url = settings.database_url
 
 engine = create_async_engine(
     url,
@@ -54,7 +49,7 @@ class MasterList(BaseClass):
 class MasterSkills(Base):
     __tablename__ = "MasterSkills"
     __table_args__ = (PrimaryKeyConstraint("skill_id", "master_id"),)
-    
+
     master_id: Mapped[int] = mapped_column(
         ForeignKey("MasterList.id"), nullable=False)
     skill_id: Mapped[int] = mapped_column(

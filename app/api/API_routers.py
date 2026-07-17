@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from database.service import Service
-from app.api.pydantic_ import UserInput, AssingMaster
+from app.api.pydantic_ import TableMasterList, UserInput, AssingMaster
 from SQLAlchemy_work_db.enusm import StatusMasterCheck
 from app.api.deps import Repository, get_repository
 
@@ -55,7 +55,7 @@ async def cancel(order_id: int,
     )
 
 
-@router.post("/order/{order_id}/delete")
+@router.delete("/order/{order_id}/delete")
 async def delete_order(order_id: int,
                        repo: Repository = Depends(get_repository)):
     return (await Service(repo).server_delete_order(
@@ -132,7 +132,7 @@ async def orders_list(repo: Repository = Depends(get_repository)):
         raise HTTPException(status_code=404, detail=f"{e}")
 
 
-@router.get("/master_list")
+@router.get("/master_list", response_model=list[TableMasterList])
 async def display(repo: Repository = Depends(get_repository)):
     try:
         return (await Service(repo).server_display_master_skills())

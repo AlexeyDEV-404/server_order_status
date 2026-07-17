@@ -142,6 +142,8 @@ class MasterSkillsRepository:
         )
         return result.all()
 
+# Исходный метод <возврата списка мастеров> =====
+
     async def informarion_about_craftsmen(self):
         """
         Создаем таблицу через join с полями name|category|service|status.
@@ -160,7 +162,10 @@ class MasterSkillsRepository:
         return [TableInfAboutCraftsmen.model_validate(result)
                 for result in results.all()]
 
+# Переработаный под ORM-model метод <возврата списка мастеров> =====
+
     async def informarion_about_craftsmen_orm(self):
+        # реализован метод до api
         """
         Возвращает список мастеров со всеми их вложенными навыками
         сразу в ORM виде.
@@ -300,7 +305,7 @@ class OrderRepository:
 
     async def complete_order(self, order_id: int):
         """
-        Переводчи статус заказа с IN_PROGRESS в COMPLETED. 
+        Переводчи статус заказа с IN_PROGRESS в COMPLETED.
         Возвращает .rowcount()
         """
         response = await self.session_manag.execute(
@@ -312,8 +317,8 @@ class OrderRepository:
                 )
             )
         )
-        response.scalars().first()
-        if response is None:
+        order = response.scalars().first()
+        if order is None:
             return None
         return TableOrders.model_validate(response)
 

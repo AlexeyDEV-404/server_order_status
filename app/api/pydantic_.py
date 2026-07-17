@@ -6,6 +6,13 @@ from SQLAlchemy_work_db.enusm import StatusMasterCheck
 Field_str_filter = Annotated[str, Field(min_length=1, max_length=500)]
 
 
+class TableSkills(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    category: str
+    service: str
+
+
 class UserInput(BaseModel):
     category: Field_str_filter
     services: Field_str_filter
@@ -17,10 +24,15 @@ class AssingMaster(BaseModel):
 
 
 class TableMasterList(BaseModel):
+    """
+    Модель для informarion_about_craftsmen_orm
+    """
     model_config = ConfigDict(from_attributes=True)
 
     name: str
     status: str
+
+    master_skills: list["TableMasterSkills"]
 
 
 class TableMasterSkills(BaseModel):
@@ -29,12 +41,7 @@ class TableMasterSkills(BaseModel):
     master_id: int
     skill_id: int
 
-
-class TableSkills(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    category: str
-    service: str
+    skills: TableSkills
 
 
 class TableOrders(BaseModel):

@@ -8,7 +8,7 @@ REST API сервис для управления заказами на быто
 |---|---|
 | Web-фреймворк | FastAPI |
 | ORM | SQLAlchemy 2.0 |
-| База данных | SQLite |
+| База данных | pgSQL |
 | Валидация | Pydantic v2 |
 | ASGI-сервер | Uvicorn |
 | Тесты | Pytest |
@@ -51,12 +51,7 @@ NEW ──► ASSINGED ──► IN_PROGRESS ──► COMPLETED
 
 ## Запуск
 
-### Через Docker
-
-```bash
-docker build -t server-order-status .
-docker run -p 8000:8000 server-order-status
-```
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### Локально
 
@@ -105,20 +100,4 @@ curl -X POST "http://localhost:8000/user/order/new" \
 
 # Найти мастера
 curl "http://localhost:8000/user/search_master?category=Сантехника&services=Замена+труб"
-```
-
-## Тесты
-
-```bash
-# Все тесты
-pytest
-
-# Только юнит-тесты репозиториев
-pytest test/test_sqlalchemy.py -v
-
-# Только API-тесты
-pytest test/test_api.py -v
-
-# E2E
-pytest test/test_end_to_end.py -v
 ```

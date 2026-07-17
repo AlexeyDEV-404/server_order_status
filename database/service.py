@@ -17,16 +17,10 @@ class Service:
         self.repo = repo
 
     async def server_order_create_new(
-            self,
-            category: str,
-            service: str,
-            description: str
-    ):
+            self, category: str, service: str, description: str):
         """ Создаем новый заказ."""
         add = await self.repo.OrderRepo.add_order(
-            category=category,
-            service=service,
-            description=description,
+            category=category, service=service, description=description,
             status=StatusOrders.NEW
         )
         await self.repo.db.commit()
