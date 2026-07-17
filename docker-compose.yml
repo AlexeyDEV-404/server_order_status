@@ -3,9 +3,9 @@ services:
     image: postgres:18-alpine
     container_name: service_order_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: SOM
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -35,7 +35,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./:/app
+      - ./:/service_order_master
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     restart: unless-stopped
 

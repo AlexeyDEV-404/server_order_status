@@ -51,7 +51,7 @@ def upgrade() -> None:
     sa.Column('skill_id', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['master_id'], ['MasterList.id'], ),
     sa.ForeignKeyConstraint(['skill_id'], ['Skills.id'], ),
-    sa.PrimaryKeyConstraint('skill_id', 'master_id')
+    sa.PrimaryKeyConstraint('master_id', 'skill_id')
     )
     # ### end Alembic commands ###
 

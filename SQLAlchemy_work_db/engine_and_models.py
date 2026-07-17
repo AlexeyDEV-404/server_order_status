@@ -48,7 +48,7 @@ class MasterList(BaseClass):
 
 class MasterSkills(Base):
     __tablename__ = "MasterSkills"
-    __table_args__ = (PrimaryKeyConstraint("skill_id", "master_id"),)
+    __table_args__ = (PrimaryKeyConstraint("master_id", "skill_id"),)
 
     master_id: Mapped[int] = mapped_column(
         ForeignKey("MasterList.id"), nullable=False)
