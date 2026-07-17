@@ -4,7 +4,7 @@ from app.api.pydantic_ import TableMasterList, UserInput, AssingMaster
 from SQLAlchemy_work_db.enusm import StatusMasterCheck
 from app.api.deps import Repository, get_repository
 
-from sqlalchemy.exc import NoResultFound, MultipleResultsFound
+from sqlalchemy.exc import NoResultFound, MultipleResultsFound, SQLAlchemyError
 from app.api.pydantic_ import (TableMasterSkills, TableOrders)
 
 router = APIRouter(prefix="/user", tags=["User"])
@@ -25,11 +25,19 @@ async def new_order(user_input: UserInput,
 async def assinged(order_id: int,
                    data: AssingMaster,
                    repo: Repository = Depends(get_repository)):
-    return (await Service(repo).server_order_master_assinged(
-        orderID=order_id,
-        masterID=data.masterID
+    try:
+        return (await Service(repo).server_order_master_assinged(
+            orderID=order_id,
+            masterID=data.masterID
+            )
         )
-    )
+    except ValueError as e:
+        raise HTTPException(status_code=409,
+                            detail="Ошибка при выполнении запроса"
+                            f"Текст ошибки {e}")
+    except SQLAlchemyError as e:
+        raise HTTPException(status_code=503, detail="Ошибка при обработке."
+                            f"ТЕКСТ ОШИБКИ {e}")
 
 
 @router.post("/order/{order_id}/in_progress", response_model=TableOrders)

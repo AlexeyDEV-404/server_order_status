@@ -9,3 +9,4 @@ asyncpg==0.31.0
 pytest-asyncio==1.4.0
 aiosqlite==0.22
 pydantic_settings==2.14.2
+alembic==1.18.5

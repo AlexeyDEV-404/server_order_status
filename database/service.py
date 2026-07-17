@@ -236,3 +236,6 @@ class Service:
             await self.repo.db.rollback()
             f"Ошибка - {e}"
             raise ValueError("Error: duplicate data")
+        except NoResultFound:
+            raise NoResultFound("Ошибка: дублирование навыков запрещено"
+                                "в текущей таблице Skills")

@@ -13,6 +13,11 @@ async def create_Base():
         return await conn.run_sync(Base.metadata.create_all)
 
 
+async def drop_Base():
+    async with engine.begin() as conn:
+        return await conn.run_sync(Base.metadata.drop_all)
+
+
 @app.get("/")
 async def root():
     return {"status": "ok"}
