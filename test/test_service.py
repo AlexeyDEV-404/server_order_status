@@ -1,512 +1,270 @@
-# pytest test/test_service.py::test_server_display_master_skills -v -s
-# pytest test\test_service.py -v -s
- 
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
-
-from SQLAlchemy_work_db.engine_and_models import MasterList
-from SQLAlchemy_work_db.enusm import StatusMasterCheck, StatusOrders
-from sqlalchemy.exc import (IntegrityError, MultipleResultsFound,
-                            NoResultFound, SQLAlchemyError)
-
+# flake8: noqa
 import pytest
-
-from database.service import Service
-
-
-@pytest.mark.asyncio
-async def test_server_order_create_new():
-    mok_repo = AsyncMock()
-    mok_repo.OrderRepo = AsyncMock()
-    mok_repo.OrderRepo.add_order.return_value = 123
-
-    result = await Service(repo=mok_repo).server_order_create_new(
-        category='Test', service='Test', description='Test')
-
-    assert result == 123
-
-    mok_repo.OrderRepo.add_order.assert_called_once()
-    mok_repo.db.commit.assert_called_once()
-
-
-class TestAssignMaster:
-    """Все тесты для метода server_order_master_assinged."""
-
-    @pytest.fixture(autouse=True)
-    def setup(self, create_order_for_mocktest):
-        """Общая настройка для всех тестов в классе."""
-        self.mock_order = create_order_for_mocktest
-        self.mock_order_repo = AsyncMock()
-        self.mock_master_repo = AsyncMock()
-
-        # Настройка базовых (успешных) return_value
-        self.mock_order_repo.master_chek_order_count.return_value = None
-        self.mock_order_repo.assinged_order.return_value = None
-        self.mock_order_repo.update_master_order.return_value = 1
-        self.mock_order_repo.specific_order.return_value = self.mock_order
-
-        self.mock_master_repo.what_is_the_status.return_value = "FREE"
-        self.mock_master_repo.update_busy_status_master.return_value = "BUSY"
-
-        self.service = Service(
-            repo=MagicMock(
-                OrderRepo=self.mock_order_repo,
-                MastListRep=self.mock_master_repo,
-                db=AsyncMock()
-            )
-        )
-
-    async def test_success(self):
-        """Успешное назначение мастера на заказ."""
-        self.mock_master_repo.update_busy_status_master.return_value = (
-            StatusMasterCheck.BUSY
-        )
-        result = await self.service.server_order_master_assinged(
-            masterID=2, orderID=1
-        )
-        assert result.status == 'ASSINGED'
-        self.mock_order_repo.assinged_order.assert_called_once_with(order_id=1)
-        (self.mock_master_repo
-            .update_busy_status_master.assert_called_once_with(id=2))
-
-    async def test_master_has_active_order(self):
-        """
-        Мастер уже выполняет другой заказ (ошибка).
-        """
-        self.mock_order_repo.master_chek_order_count.return_value = 1
-        with pytest.raises(
-            ValueError,
-            match="Мастер выполняет заказ и не может быть назначен на другой."
-        ):
-            await self.service.server_order_master_assinged(
-                masterID=2, orderID=1
-            )
-
-    async def test_master_busy(self):
-        """Статус мастера BUSY (ошибка)."""
-        self.mock_master_repo.what_is_the_status.return_value = "BUSY"
-        self.mock_order_repo.master_chek_order_count.return_value = None
-        with pytest.raises(
-            ValueError,
-            match=r"Статус мастера BUSY \(занят\) и не может принять заказ\."
-        ):
-            await self.service.server_order_master_assinged(
-                masterID=2, orderID=1
-            )
-
-    async def test_order_not_found(self):
-        """Заказ не найден (ошибка)."""
-        self.mock_order_repo.specific_order.return_value = None
-        with pytest.raises(ValueError, match='Заказ с ID 1 не найден'):
-            await self.service.server_order_master_assinged(
-                masterID=2, orderID=1
-            )
-
-    async def test_sqlalchemy_error(self):
-        """Ошибка на уровне SQLAlchemy."""
-        self.mock_order_repo.specific_order.side_effect = SQLAlchemyError(
-            "Алхим выдал ошибку."
-        )
-        with pytest.raises(
-            SQLAlchemyError,
-            match="Ошибка запроса на уровне SQLAlchemy. "
-            "Текст ошибка - Алхим выдал ошибку."
-        ):
-            await self.service.server_order_master_assinged(
-                masterID=2, orderID=1
-            )
-
-    async def test_update_master_order_failed(self):
-        """Не удалось назначить мастера (update вернул None)."""
-        self.mock_order_repo.update_master_order.return_value = None
-        with pytest.raises(
-            ValueError,
-            match="Ошибка: мастер не назначен за заказ."
-        ):
-            await self.service.server_order_master_assinged(
-                masterID=2, orderID=1
-            )
-
-    async def test_update_status_master_failed(self):
-        """
-        Не удалось обновить статус мастера (BUSY не был установлен).
-        """
-        self.mock_master_repo.update_busy_status_master.return_value = "FREE"
-        self.mock_master_repo.specific_order.return_value = "ASSINGED"
-        with pytest.raises(
-            ValueError,
-            match="Ошибка: полученное значение FREE"
-            "не соответствует ожидаемому BUSY."
-        ):
-            await self.service.server_order_master_assinged(
-                masterID=2, orderID=1
-            )
-
-
-@pytest.mark.asyncio
-async def test_server_order_in_progress(create_order_for_mocktest):
-    mock_order = AsyncMock()
-    order = create_order_for_mocktest
-    mock_order.in_progress_orders.return_value = order
-
-    service = await Service(
-        repo=MagicMock(OrderRepo=mock_order,
-                       db=AsyncMock())
-        ).server_order_in_progress(1)
-
-    assert service.status == "ASSINGED"
-
-
-@pytest.mark.asyncio
-async def test_server_order_complet(create_order_for_mocktest):
-    mock_MasterList = AsyncMock()
-    mock_Order = AsyncMock()
-
-    mock_tabel_order = create_order_for_mocktest
-    mock_Order.complete_order.return_value = mock_tabel_order
-    mock_MasterList.update_free_status_master.return_value = (
-        StatusMasterCheck.FREE
-    )
-
-    result = await Service(repo=MagicMock(
-        OrderRepo=mock_Order,
-        MastListRep=mock_MasterList,
-        db=AsyncMock())
-    ).server_order_complet(1)
-
-    assert result.category == "Test_cat"
-    assert result.status == "ASSINGED"
-
-
-# @pytest.mark.asyncio
-# async def test_server_display_master_skills():
-#     mock_masterskill = AsyncMock()
-#     num_id = 1
-#     mock_masterskill.informarion_about_craftsmen.return_value = [
-#         TableInfAboutCraftsmen(
-#             id=num_id, name="name", status="ASSINGED",
-#             master_skills=AsyncMock()
-#         )
-#     ]
-
-#     result = await Service(repo=AsyncMock(
-#         MastSkillsRep=mock_masterskill, db=AsyncMock()
-#         )
-#     ).server_display_master_skills()
-#     print(result, "====", result[0])
-#     assert result[0].status == "ASSINGED"
-
-
-@pytest.mark.asyncio
-async def test_server_specific_order_tru(create_order_for_mocktest):
-    mock_order = AsyncMock()
-    order = create_order_for_mocktest
-    mock_order.specific_order.return_value = order
-
-    result = await Service(repo=MagicMock(
-        OrderRepo=mock_order, db=AsyncMock()
-        )
-    ).server_specific_order(order.id)
-    assert result.status == "ASSINGED"
-    assert result.category == "Test_cat"
-    assert result.service == "Test_serv"
-
-
-@pytest.mark.asyncio
-async def test_server_specific_order_false():
-    mock_order = AsyncMock()
-    mock_order.specific_order.return_value = None
-
-    with pytest.raises(ValueError, match="Заказ с ID 1 не найден"):
-        await Service(repo=MagicMock(
-            OrderRepo=mock_order, db=AsyncMock()
-            )
-        ).server_specific_order(1)
-
-
-@pytest.mark.asyncio
-async def test_server_all_orders_tru(create_order_for_mocktest):
-    mock_order = AsyncMock()
-
-    order = create_order_for_mocktest   
-    mock_order.server_all_orders.return_value = order
-
-    result = await Service(repo=MagicMock(
-        OrderRepo=mock_order, db=AsyncMock())
-    ).server_all_orders()
-    assert isinstance(result, list)
-
-
-@pytest.mark.asyncio
-async def test_server_all_orders_false():
-    mock_order = AsyncMock()
-    mock_order.all_orders.return_value = []
-
-    with pytest.raises(ValueError, match="Error: response cannot be empty"):
-        await Service(repo=MagicMock(
-            OrderRepo=mock_order, db=AsyncMock()
-            )
-        ).server_all_orders()
-
-
-@pytest.mark.asyncio
-async def test_server_search_master_try():
-    mock_masterskillsrepo = AsyncMock()
-    mock_masterskillsrepo.search_master.return_value = [SimpleNamespace(
-        id=1, name="name"
-    )]
-    result = await Service(repo=MagicMock(
-        MastSkillsRep=mock_masterskillsrepo, db=AsyncMock()
-        )
-    ).server_search_master(category="Test_cat", service="Test_serv")
-
-    assert result == [{"id": 1, "name": "name"}]
-
-
-@pytest.mark.asyncio
-async def test_server_search_master_false():
-    mock_masterskillsrepo = AsyncMock()
-    mock_masterskillsrepo.search_master.return_value = []
-
-    with pytest.raises(ValueError, match="Данные отсутствуют"):
-        await Service(repo=MagicMock(
-            MastSkillsRep=mock_masterskillsrepo, db=AsyncMock()
-            )
-        ).server_search_master(category="Test_cat", service="Test_serv")
-
-
-@pytest.mark.asyncio
-async def test_server_services_try():
-    mock_rep = AsyncMock()
-    mock_rep.select_works.return_value = [(
-        "Test_cat", "Test_serv1, Test_serv2"
-    )]
-
-    result = await Service(repo=MagicMock(
-        SkillsRepo=mock_rep, db=AsyncMock())
-    ).server_services()
-
-    assert result[0]["category"] == "Test_cat"
-    assert result[0]["service"] == ['Test_serv1', 'Test_serv2']
-
-
-@pytest.mark.asyncio
-async def test_server_services_false():
-    mock_rep = AsyncMock()
-    mock_rep.select_works.return_value = []
-
-    with pytest.raises(ValueError, match="Данные отсутствуют"):
-        await Service(repo=MagicMock(
-            SkillsRepo=mock_rep, db=AsyncMock())
-        ).server_services()
-
-
-@pytest.mark.asyncio
-async def test_server_cancel_order_try(create_order_for_mocktest):
-    mock_rep = AsyncMock()
-    order = create_order_for_mocktest
-    order.status = "NEW"
-    mock_rep.specific_order.return_value = order
-    mock_rep.cancel_order.return_value = StatusOrders.CANCEL
-
-    result = await Service(repo=MagicMock(
-        OrderRepo=mock_rep, db=AsyncMock())
-    ).server_cancel_order(order.id)
-
-    assert result == StatusOrders.CANCEL
-
-
-@pytest.mark.asyncio
-async def test_server_cancel_order_false(create_order_for_mocktest):
-    mock_rep = AsyncMock()
-    order = create_order_for_mocktest
-    order.status = "RANDOM_STATUS"
-    mock_rep.specific_order.return_value = order
-
-    with pytest.raises(
-        ValueError,
-        match="Ошибка: отменить можно только заказ с статусом 'NEW'"
+from app.core.unit_of_work import UnitOfWork
+from app.models.enum_model import StatusMasterCheck, StatusOrders
+from app.services.master_list_case import MasterListQueryService
+from app.services.master_skills_case import MasterSkillsQueryService
+from app.services.orders_case import OrderCommandService, OrderQueryService
+from app.core.exception import (
+    MasterStatusError,
+    OrderStatusError,
+    MasterNoFoundError,
+    SkillsError)
+from sqlalchemy.exc import NoResultFound, IntegrityError
+
+from app.services.skills_case import SkillsService, SkillsServiceORM
+from app.shemas.shemas import MastListValid, MasterListOut, OrderValid, SkillsValid
+
+
+class TestOrderLifeCycle:
+    async def test_assign_and_error(
+        self, init_uow: UnitOfWork, create_skills, create_master, one_order
     ):
-        await Service(repo=MagicMock(
-            OrderRepo=mock_rep, db=AsyncMock())
-        ).server_cancel_order(order.id)
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order.id
+        master_id = create_master.id
 
+        with pytest.raises(MasterNoFoundError):
+            test_func = await logic.order_lifecycle(
+                new_status=StatusOrders.ASSIGNED,
+                order_id=ord_id,
+                master_id=999)
 
-@pytest.mark.asyncio
-async def test_server_delete_order_order_try(create_order_for_mocktest):
-    mock_rep = AsyncMock()
-    order = create_order_for_mocktest
-    mock_rep.specific_order.return_value = order
-    mock_rep.delete_order.return_value = order.id
+        with pytest.raises(NoResultFound):
+            test_func = await logic.order_lifecycle(
+                new_status=StatusOrders.ASSIGNED,
+                order_id=999,
+                master_id=master_id)
 
-    result = await Service(repo=MagicMock(
-        OrderRepo=mock_rep, db=AsyncMock())
-    ).server_delete_order(order.id)
+        with pytest.raises(OrderStatusError):
+            test_func = await logic.order_lifecycle(
+                new_status=StatusOrders.COMPLETED,
+                order_id=ord_id,
+                master_id=master_id)
 
-    assert result == f"Заказ с ID {order.id} успешно удален."
+        test_func = await logic.order_lifecycle(
+            new_status=StatusOrders.ASSIGNED,
+            order_id=ord_id,
+            master_id=master_id)
+        
+        async with init_uow as uow:
+            res = await uow.repo.master_list.get_inform(
+                master_id=create_master.id, block_select=True)
 
+        assert res.status == StatusMasterCheck.BUSY  # type: ignore
+        assert test_func.status == StatusOrders.ASSIGNED
+        assert test_func.master_id == master_id
 
-@pytest.mark.asyncio
-async def test_server_delete_order_order_false():
-    mock_rep = AsyncMock()
-    mock_rep.specific_order.return_value = None
-
-    with pytest.raises(ValueError, match="Заказа не существует."):
-        await Service(repo=MagicMock(
-            OrderRepo=mock_rep, db=AsyncMock()
-            )
-        ).server_delete_order(1)
-
-
-@pytest.mark.asyncio
-async def test_server_add_master_in_db_try():
-    mock_repo = AsyncMock()
-    mock_repo.add.return_value = 1
-
-    result = await Service(repo=MagicMock(
-        MastListRep=mock_repo, db=AsyncMock())
-    ).server_add_master_in_db(name="Test_name", status=StatusMasterCheck.FREE)
-
-    assert result == 1
-
-
-@pytest.mark.asyncio
-async def test_server_add_master_in_db_false_1():
-    mock_repo = AsyncMock()
-    mock_repo.add.side_effect = NoResultFound
-
-    with pytest.raises(
-        NoResultFound,
-        match="Ошика: отсутствует результат запроса."
-        "Адрес ошибки: server.py::server_add_master_in_db"
+    async def test_assign_for_master_error(
+        self, init_uow: UnitOfWork, create_skills, create_master_busy,
+        one_order
     ):
-        await Service(
-            repo=MagicMock(MastListRep=mock_repo, db=AsyncMock())
-            ).server_add_master_in_db(
-            name="Test_name", status=StatusMasterCheck.FREE
-        )
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order.id
+        master_id = create_master_busy.id
 
+        with pytest.raises(MasterStatusError):
+            await logic.order_lifecycle(
+                new_status=StatusOrders.ASSIGNED,
+                order_id=ord_id,
+                master_id=master_id)
 
-@pytest.mark.asyncio
-async def test_server_add_master_in_db_false_2():
-    mock_repo = AsyncMock()
-    mock_repo.add.side_effect = MultipleResultsFound
-
-    with pytest.raises(
-        MultipleResultsFound,
-        match="Ошика: недопустимый результат, метод вернул больше одного "
-        "значения. Адрес ошибки: server.py::server_add_master_in_db"
+    async def test_in_progress(
+        self, init_uow: UnitOfWork, one_order_assign
     ):
-        await Service(repo=MagicMock(
-            MastListRep=mock_repo, db=AsyncMock())
-        ).server_add_master_in_db(
-            name="Test_name", status=StatusMasterCheck.FREE
-        )
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order_assign.id
+        master_id = one_order_assign.master_id
+
+        test_func = await logic.order_lifecycle(
+            new_status=StatusOrders.IN_PROGRESS,
+            order_id=ord_id,
+            master_id=master_id)
+
+        assert test_func.status == StatusOrders.IN_PROGRESS
+
+    async def test_in_progress_exc_ord_status(
+        self, init_uow: UnitOfWork, one_order, create_master
+    ):
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order.id
+        master_id = create_master.id
+        with pytest.raises(OrderStatusError):
+            await logic.order_lifecycle(
+                new_status=StatusOrders.IN_PROGRESS,
+                order_id=ord_id,
+                master_id=master_id)
+
+    async def test_complete(
+        self, init_uow: UnitOfWork, one_order_in_progress
+    ):
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order_in_progress.id
+        master_id = one_order_in_progress.master_id
+
+        test_func = await logic.order_lifecycle(
+            new_status=StatusOrders.COMPLETED,
+            order_id=ord_id,
+            master_id=master_id)
+
+        async with init_uow as uow:
+            master = await uow.repo.master_list.get_inform(
+                master_id=master_id, block_select=True)
+
+        assert master.status == StatusMasterCheck.FREE  # type: ignore
+        assert test_func.status == StatusOrders.COMPLETED
+        assert test_func.master_id == master_id
+        assert test_func.description == "desriptor order."
+
+    async def test_complete_error(
+        self, init_uow: UnitOfWork, one_order_in_progress
+    ):
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order_in_progress.id
+        master_id = one_order_in_progress.master_id
+
+        async with init_uow as uow:
+            master = await uow.repo.master_list.get_inform(
+                master_id=master_id,
+                block_select=True)
+            master.status = StatusMasterCheck.FREE  #type: ignore
+            
+        with pytest.raises(MasterStatusError):
+            await logic.order_lifecycle(
+                new_status=StatusOrders.COMPLETED,
+                order_id=ord_id,
+                master_id=master_id)
+
+    async def test_cancel(
+        self, init_uow: UnitOfWork, create_skills, create_master, one_order
+    ):
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order.id
+        master_id = create_master.id
+        result = await logic.order_lifecycle(
+            new_status=StatusOrders.CANCEL,
+            order_id=ord_id,
+            master_id=master_id)
+
+        assert result.status == StatusOrders.CANCEL
+
+    async def test_delete(self, init_uow: UnitOfWork, one_order):
+        assert isinstance(one_order.id, int)
+        assert one_order.status == StatusOrders.NEW
+
+        logic = OrderCommandService(uow=init_uow)
+        ord_id = one_order.id
+
+        await logic.delete(order_id=ord_id)
+
+        async with init_uow as uow:
+            result = await uow.repo.order_repo.fast_chek(order_id=ord_id)
+
+        assert isinstance(result, bool)
+        assert result is False
+  
+
+class TestOrderQuery:
+    async def test_get_inf_order(self, init_uow: UnitOfWork, one_order):
+        logic = OrderQueryService(uow=init_uow)
+        ord_id = one_order.id
+        result = await logic.get_inf_order(order_id=ord_id)
+
+        assert isinstance(result, OrderValid)
+        assert isinstance(result.status, StatusOrders)
+        assert result.orders_skills.category == "Plumbing"
+        assert result.orders_skills.service == "replacement of internal building pipes"
+        assert result.description == "desriptor order."
+
+    async def test_post_in_db(self, init_uow: UnitOfWork, create_skills):
+        logic = OrderQueryService(uow=init_uow)
+        skill_id = create_skills.id
+        result = await logic.post_in_db(skill_id=skill_id, description="Test description")
+        
+        assert isinstance(result, bool)
 
 
-@pytest.mark.asyncio
-async def test_server_master_info_try():
-    mock_repo = AsyncMock()
-    mock_repo.master_info.return_value = MasterList(
-        name="Nick", status=StatusMasterCheck.FREE
-    )
+class TestSkill:
+    async def test_add_raise(self, init_uow: UnitOfWork, create_skills):
+        logic = SkillsServiceORM(uow=init_uow)
+        with pytest.raises(SkillsError):
+            async with init_uow as uow:
+                await logic.add(
+                    category=create_skills.category,
+                    service=create_skills.service)
 
-    result = await Service(repo=MagicMock(
-        MastListRep=mock_repo, db=AsyncMock())
-    ).server_master_info(1)
-    assert result.name == "Nick"
-    assert result.status == StatusMasterCheck.FREE
+    async def test_add(self, init_uow: UnitOfWork):
+        logic = SkillsServiceORM(uow=init_uow)
+        categ = "Plumbing"
+        serv = "replacement of internal building pipes"
+        result = await logic.add(
+            category=categ, service=serv)
 
+        assert isinstance(result.id, int)
+        assert result.category == "Plumbing"
 
-@pytest.mark.asyncio
-async def test_server_master_info_false():
-    mock_repo = AsyncMock()
-    mock_repo.master_info.return_value = None
+    async def test_get_all_table(self, init_uow: UnitOfWork):
+        async with init_uow as conn:
+            conn.repo.skills_rep_orm.add(
+                category="Категория 1",
+                service="Услуга 1")
+            conn.repo.skills_rep_orm.add(
+                            category="Категория 2",
+                            service="Услуга 2")
+            conn.repo.skills_rep_orm.add(
+                category="Категория 3",
+                service="Услуга 3")
+    
+        logic = SkillsService(uow=init_uow)
+        result = await logic.get_all_table()
 
-    with pytest.raises(TypeError, match="Ошибка: Пустой результат"):
-        await Service(repo=MagicMock(
-            MastListRep=mock_repo, db=AsyncMock())
-        ).server_master_info(1)
-
-
-@pytest.mark.asyncio
-async def test_server_add_master_skills_tru():
-    mock_repo = AsyncMock()
-    mock_repo.add_master_skills.return_value = {"master_id": 1, "skill_id": 1}
-    result = await Service(repo=MagicMock(
-        MastSkillsRep=mock_repo, db=AsyncMock())
-    ).server_add_master_skills(1, 1)
-
-    assert result.master_id == 1
-    assert result.skill_id == 1
-
-
-@pytest.mark.asyncio
-async def test_server_add_master_skills_false_1():
-    mock_repo = AsyncMock()
-    mock_repo.add_master_skills.side_effect = IntegrityError(
-        statement="test", params={}, orig=Exception("duplicate key"))
-
-    with pytest.raises(ValueError, match="Навык уже существует"):
-        await Service(
-            repo=MagicMock(MastSkillsRep=mock_repo, db=AsyncMock())
-        ).server_add_master_skills(1, 1)
+        assert isinstance(result, list)
+        assert isinstance(result[0], SkillsValid)
+        assert isinstance(result[-1], SkillsValid)
+        assert result[0].category == "Категория 1"
+        assert result[0].service == "Услуга 1"
+        assert result[-1].category == "Категория 3"
+        assert result[-1].service == "Услуга 3"
 
 
-@pytest.mark.asyncio
-async def test_server_add_master_skills_false_2():
-    mock_repo = AsyncMock()
-    mock_repo.add_master_skills.side_effect = IntegrityError(
-        statement="test", params={}, orig=Exception("some error")
-    )
+class TestMasterSkills:
+    async def test_add(self, init_uow: UnitOfWork, create_master, create_skills):
+        logic = MasterSkillsQueryService(uow=init_uow)
+        result = await logic.add(
+            master_id=create_master.id, skill_id=create_skills.id)
 
-    with pytest.raises(ValueError, match="Ошибка целостности данных"):
-        await Service(
-            repo=MagicMock(MastSkillsRep=mock_repo, db=AsyncMock())
-        ).server_add_master_skills(1, 1)
+        with pytest.raises(ValueError, match="Такая связь мастер-навык уже существует"):
+            await logic.add(
+                master_id=create_master.id, skill_id=create_skills.id)
 
-
-@pytest.mark.asyncio
-async def test_server_all_table_tru():
-    mock_repo = AsyncMock()
-    mock_repo.all_table.return_value = [(1, 1), (2, 1)]
-
-    result = await Service(repo=MagicMock(
-        MastSkillsRep=mock_repo, db=AsyncMock())
-    ).server_all_table()
-
-    assert result == [(1, 1), (2, 1)]
+        assert result is True
 
 
-@pytest.mark.asyncio
-async def test_server_all_table_false():
-    mock_repo = AsyncMock()
-    mock_repo.all_table.return_value = None
+class TestMasterList:
+    async def test_add(self, init_uow: UnitOfWork):
+        logic = MasterListQueryService(uow= init_uow)
+        result = await logic.create(
+            name="Иван", status=StatusMasterCheck.FREE)
 
-    with pytest.raises(ValueError, match="Error: response cannot be empty"):
-        await Service(repo=MagicMock(
-            MastSkillsRep=mock_repo, db=AsyncMock())
-        ).server_all_table()
+        assert isinstance(result, MastListValid)
+        assert isinstance(result.name, str)
+        assert result.status == StatusMasterCheck.FREE
+
+    async def all_free_master(self, init_uow: UnitOfWork, create_master):
+        logic = MasterListQueryService(uow= init_uow)
+        result = await logic.all_free_master(status=StatusMasterCheck.FREE)
+        
+        assert isinstance(result, list)
+        assert isinstance(result[0], MastListValid)
+
+    async def test_all_table(self, init_uow: UnitOfWork, create_master):
+        logic = MasterListQueryService(uow= init_uow)
+        result = await logic.all_table()
+
+        assert isinstance(result, list)
+        assert isinstance(result[0], MasterListOut)
 
 
-async def test_server_insert_skill_try():
-    mock_repo = AsyncMock()
-    mock_repo.insert_skill.return_value = 1
-
-    result = await Service(repo=MagicMock(
-        SkillsRepo=mock_repo, db=AsyncMock())
-    ).server_insert_skill(category="test_cat", service="test_service")
-
-    assert result == 1
 
 
-async def test_server_insert_skill_false():
-    mock_repo = AsyncMock()
-    mock_repo.insert_skill.side_effect = IntegrityError(
-        statement="test", params={}, orig=Exception("some error")
-    )
 
-    with pytest.raises(ValueError, match="Error: duplicate data"):
-        await Service(
-            repo=MagicMock(SkillsRepo=mock_repo, db=AsyncMock())
-        ).server_insert_skill(category="test_cat", service="test_service")

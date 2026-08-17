@@ -8,7 +8,7 @@ class StatusMasterCheck(Enum):
 
 class StatusOrders(Enum):
     NEW = "NEW"
-    ASSINGED = "ASSINGED"
+    ASSIGNED = "ASSIGNED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     CANCEL = "CANCEL"

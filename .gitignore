@@ -1,17 +1,4 @@
-# Python кэш
-__pycache__/
-*.pyc
-*.pyo
-
-# База данных
-*.db
-
-# Переменные окружения
-.env
-
-# VSCode
-.vscode/
+__pycache__
 .venv
-.vscode
 .pytest_cache
-TODO.md
+.vscode

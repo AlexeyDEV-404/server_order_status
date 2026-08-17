@@ -1,23 +1,53 @@
-# uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# flake8: noqa
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from app.api.master import router as rout_master
+from app.api.master_skills import router as rout_ms
+from app.api.orders import router as rout_ord
+from app.api.skills import router as rout_skills
+from app.core.database import engine
+from app.models.models import Base
 
-from app.api.API_routers import router
-from SQLAlchemy_work_db.engine_and_models import Base, engine
 
-app = FastAPI()
-app.include_router(router)
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("STARTUP")
+    await create_BASE()
+    yield
 
 
-async def create_Base():
+app = FastAPI(lifespan=lifespan)
+
+
+app.include_router(rout_master)
+app.include_router(rout_ms)
+app.include_router(rout_ord)
+app.include_router(rout_skills)
+
+
+async def create_BASE():
     async with engine.begin() as conn:
-        return await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
 
 
-async def drop_Base():
+async def drop_BASE():
     async with engine.begin() as conn:
-        return await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all)
 
 
-@app.get("/")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    return {"status": "ok"}
+    return """
+    <html>
+        <body>
+            <h1>Моя картинка</h1>
+            <img src="static/image.png" alt="image">
+        </body>
+    </html>
+    """
