@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.core.exception import MasterStatusError
 from app.models.enum_model import StatusOrders
 from app.shemas.shemas import (
+    # OrderValid,
     ParamsLifeCycle)
 from app.services.orders_case import (
     OrderQueryService,
@@ -9,7 +10,8 @@ from app.services.orders_case import (
 from app.dependencies.deps import (
     order_query_service,
     order_command_service,
-    params_life_cycle)
+    params_for_cancel,
+    params_life_cycle_orders)
 
 
 router = APIRouter(prefix="/order", tags=["order"])
@@ -48,7 +50,7 @@ async def create_order(
 
 @router.patch("/assign")
 async def assign(
-        params: ParamsLifeCycle = Depends(params_life_cycle),
+        params: ParamsLifeCycle = Depends(params_life_cycle_orders),
         service: OrderCommandService = Depends(order_command_service)
         ):
     """
@@ -67,7 +69,7 @@ async def assign(
 
 @router.patch("/in_progress")
 async def in_progress(
-    params: ParamsLifeCycle = Depends(params_life_cycle),
+    params: ParamsLifeCycle = Depends(params_life_cycle_orders),
     service: OrderCommandService = Depends(order_command_service)
         ):
     """
@@ -85,7 +87,7 @@ async def in_progress(
 
 @router.patch("/completed")
 async def completed(
-    params: ParamsLifeCycle = Depends(params_life_cycle),
+    params: ParamsLifeCycle = Depends(params_life_cycle_orders),
     service: OrderCommandService = Depends(order_command_service)
         ):
     """
@@ -102,7 +104,7 @@ async def completed(
 
 @router.patch("/cancel")
 async def cancel(
-    params: ParamsLifeCycle = Depends(params_life_cycle),
+    params: ParamsLifeCycle = Depends(params_for_cancel),
     service: OrderCommandService = Depends(order_command_service)
         ):
     """
@@ -110,9 +112,7 @@ async def cancel(
     это "новый" или "назначен" мастер, со статуса "в процессе выполнение"
     отмена запрещена.
     """
-    result = await service.order_lifecycle(
-        new_status=StatusOrders.CANCEL,
-        order_id=params.order_id, master_id=params.master_id)
+    result = await service.cancel(order_id=params.order_id)
     if result:
         return result
     else:

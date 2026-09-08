@@ -2,7 +2,7 @@ from sqlalchemy import and_, exists, select
 
 from app.models.enum_model import StatusOrders
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app.models.models import Orders
 
 
@@ -15,7 +15,7 @@ class OrdersRepORM:
 
     async def get_inform(
         self, order_id: int, block_select: bool
-    ) -> Orders | None:
+    ) -> Orders:
         """
         Запрос на получение информации по заказу.
         ВНИМАНИЕ!! Обращение идет через AsyncSession.add() и НЕ использует
@@ -30,8 +30,10 @@ class OrdersRepORM:
         else:
             stmt = await self.session.get(
                 Orders, order_id,
+                options=[selectinload(Orders.orders_skills)],
                 with_for_update=block_select)
-
+        if not stmt:
+            raise ValueError("ХУЯКАНАМАНА РЕЗУЛЬТАТА НЭЭЭМАА")
         return stmt
 
     def create(self, skill_id: int, description: str) -> Orders:

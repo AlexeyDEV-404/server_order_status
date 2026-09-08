@@ -1,7 +1,5 @@
 from sqlalchemy.exc import NoResultFound
 
-from app.core.unit_of_work import UnitOfWork
-
 from app.models.models import (
     MasterList,
     Orders)
@@ -13,25 +11,31 @@ from app.core.exception import (
     MasterStatusError,
     OrderStatusError,
     MasterNoFoundError)
-from app.shemas.shemas import OrderValid
+from app.shemas.shemas import OrderValid, OrderValid2
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.helper.help import Repository
 
 
 class OrderQueryService:
-    def __init__(self, uow: UnitOfWork) -> None:
-        self.uow = uow
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+        self.repo = Repository(self.session)
 
     async def get_inf_order(self, order_id: int):
-        async with self.uow:
-            result = await self.uow.repo.order_repo_orm.get_inform(
+        async with self.session.begin():
+            request = await self.repo.order_repo_orm.get_inform(
                 order_id=order_id, block_select=False)
-        return OrderValid.model_validate(result)
+            result = OrderValid.model_validate(request)
+        return result
 
     async def post_in_db(self, skill_id: int, description: str) -> bool:
-        async with self.uow:
-            self.uow.repo.order_repo_orm.create(
+        async with self.session.begin():
+            self.repo.order_repo_orm.create(
                 skill_id=skill_id, description=description)
-            await self.uow.session.flush()
-            result = await self.uow.repo.order_repo.fast_chek_new_order(
+            await self.session.flush()
+            result = await self.repo.order_repo.fast_chek_new_order(
                 skill_id=skill_id, description=description)
         return result
 
@@ -42,11 +46,12 @@ class OrderCommandService:
         (StatusOrders.NEW, StatusOrders.ASSIGNED): "assign",
         (StatusOrders.ASSIGNED, StatusOrders.IN_PROGRESS): "in_progress",
         (StatusOrders.IN_PROGRESS, StatusOrders.COMPLETED): "complete",
-        (StatusOrders.NEW, StatusOrders.CANCEL): "cancel"
+        # (StatusOrders.NEW, StatusOrders.CANCEL): "cancel"
     }
 
-    def __init__(self, uow: UnitOfWork) -> None:
-        self.uow = uow
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+        self.repo = Repository(self.session)
 
     async def order_lifecycle(
             self, new_status: StatusOrders,
@@ -55,11 +60,11 @@ class OrderCommandService:
         Функция агрегатор, которая направляет текущее выполнение в зависимости
         от этапа жизненного цикла заказа.
         """
-        async with self.uow:
-            order = await self.uow.repo.order_repo_orm.get_inform(
+        async with self.session.begin():
+            order = await self.repo.order_repo_orm.get_inform(
                 order_id=order_id, block_select=True)
-
-            master = await self.uow.repo.master_list.get_inform(
+            
+            master = await self.repo.master_list.get_inform(
                         master_id=master_id, block_select=True)
 
             if master is None:
@@ -81,7 +86,8 @@ class OrderCommandService:
 
             handler(order=order, master=master, **kwargs)
             order.status = new_status
-        return order
+            order_finish = OrderValid2.model_validate(order)
+        return order_finish
 
     def assign(
             self, order: Orders, master: MasterList, **kwargs
@@ -107,20 +113,27 @@ class OrderCommandService:
         else:
             raise MasterStatusError("Ошибка: статус мастера уже FREE.")
 
-    def cancel(
-            self, order: Orders, **kwargs) -> None:
-        pass
+    async def cancel(self, order_id: int):
+        async with self.session.begin() as conn:
+            order = await self.repo.order_repo_orm.get_inform(
+                order_id=order_id, block_select=True)
+            if order.status == StatusOrders.NEW:
+                order.status = StatusOrders.CANCEL
+            else:
+                raise OrderStatusError("Error: Invalid status")
+            order_finish = OrderValid.model_validate(order)
+        return order_finish
 
     async def delete(self, order_id: int, **kwargs) -> str:
         """
         ОГРАНИЧИТЬ ИСПОЛЬЗОВАНИЯ ЭТОГО ЗАПРОСА
         ЧЕРЕЗ ВВЕДЕНИЕ РОЛЕЙ ПОЛЬЗОВАТЕЛЕЙ
         """
-        async with self.uow:
+        async with self.session.begin():
             try:
-                order = await self.uow.repo.order_repo_orm.get_inform(
+                order = await self.repo.order_repo_orm.get_inform(
                     order_id=order_id, block_select=True)
-                await self.uow.session.delete(order)
+                await self.session.delete(order)
             except NoResultFound:
                 raise
         return "Запись успешно удалена"

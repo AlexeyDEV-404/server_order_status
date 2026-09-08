@@ -36,9 +36,9 @@ class SkillRep():
 
         return bool(request)
 
-    async def all_table(self) -> Sequence[Skills]:
+    async def all_table(self):
         request = await self.session.execute(select(Skills))
-        return request.scalars().all()
+        return request.scalars()
 
     async def get_skill_from_db(
         self, category: str, service: str

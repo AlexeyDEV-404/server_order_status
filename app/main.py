@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
     print("STARTUP")
     await create_BASE()
     yield
+    # await drop_BASE()
 
 
 app = FastAPI(lifespan=lifespan)

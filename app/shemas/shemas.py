@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import (BaseModel,
                       Field,
                       ConfigDict)
@@ -20,12 +22,9 @@ class MasterSkillValid(BaseModel):
 
 
 class SkillsValid(BaseModel):
-    """
-    id: int, category: Field_str_filter, service: Field_str_filter
-    """
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: int | None
     category: Field_str_filter
     service: Field_str_filter
 
@@ -41,16 +40,27 @@ class SkillsValidNoID(BaseModel):
 
 
 class OrderValid(BaseModel):
-    """
-    orders_skills: SkillsValid, description: Field_str_filter,
-    status: StatusOrders, master_id: int | None
-    """
     model_config = ConfigDict(from_attributes=True)
 
-    orders_skills: SkillsValid
-    description: Field_str_filter
-    status: StatusOrders
+    skill_id: int 
+    orders_skills: SkillsValidNoID
+    description: Field_str_filter 
+    status: StatusOrders 
     master_id: int | None
+    created_at: datetime 
+    update_at: datetime | None
+
+
+class OrderValid2(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    skill_id: int 
+    orders_skills: SkillsValid
+    description: Field_str_filter 
+    status: StatusOrders 
+    master_id: int | None
+
+
 
 
 class ParamsLifeCycle(BaseModel):
@@ -61,6 +71,15 @@ class ParamsLifeCycle(BaseModel):
 
     order_id: int
     master_id: int
+
+
+class ParamsLForCancle(BaseModel):
+    """
+    order_id: int, master_id: int
+    """
+    model_config = ConfigDict(from_attributes=True)
+
+    order_id: int
 
 
 class MastListValid(BaseModel):

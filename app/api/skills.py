@@ -9,7 +9,7 @@ from app.shemas.shemas import SkillsValidNoID
 router = APIRouter(prefix="/catalog_skills", tags=["catalog_skills"])
 
 
-@router.post("/add", status_code=201)  # есть тест
+@router.post("/add", status_code=201) 
 async def add(
     data: SkillsValidNoID,
     service_deps: SkillsServiceORM = Depends(skills_service_orm)
@@ -25,7 +25,7 @@ async def add(
             status_code=409, detail="Error: Skills already exists")
 
 
-@router.get("/all_table")  # есть тест
+@router.get("/all_table") 
 async def all_table(
     service: SkillsService = Depends(skills_service)
 ):
@@ -37,4 +37,4 @@ async def all_table(
     if result or result not in [[], {}, None, ""]:
         return result
     else:
-        raise HTTPException(status_code=404, detail="Data not Found")
+        raise HTTPException(status_code=404, detail="Not found")

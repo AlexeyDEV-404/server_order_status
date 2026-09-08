@@ -72,8 +72,10 @@ class Orders(BaseClass):
     __tablename__ = "Orders"
 
     skill_id: Mapped[int] = mapped_column(ForeignKey("Skills.id"))
+
     orders_skills: Mapped["Skills"] = relationship(
         back_populates="skills_orders")
+
     description: Mapped[BaseClass.string]
     status: Mapped[StatusOrders] = mapped_column(Enum(StatusOrders))
     master_id: Mapped[int | None] = mapped_column(
