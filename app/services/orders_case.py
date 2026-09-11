@@ -42,7 +42,7 @@ class OrderQueryService:
 
 class OrderCommandService:
 
-    TRANSAСTION_MAP = {
+    TRANSACTION_MAP = {
         (StatusOrders.NEW, StatusOrders.ASSIGNED): "assign",
         (StatusOrders.ASSIGNED, StatusOrders.IN_PROGRESS): "in_progress",
         (StatusOrders.IN_PROGRESS, StatusOrders.COMPLETED): "complete",
@@ -75,7 +75,7 @@ class OrderCommandService:
                 raise NoResultFound(
                     f"Ошибка: заказ с id - {order_id} не найден")
 
-            handler_name = self.TRANSAСTION_MAP.get((order.status, new_status))
+            handler_name = self.TRANSACTION_MAP.get((order.status, new_status))
 
             if handler_name is None:
                 raise OrderStatusError(
