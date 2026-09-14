@@ -38,7 +38,7 @@ class SkillRep():
 
     async def all_table(self):
         request = await self.session.execute(select(Skills))
-        return request.scalars()
+        return request.scalars().all()
 
     async def get_skill_from_db(
         self, category: str, service: str

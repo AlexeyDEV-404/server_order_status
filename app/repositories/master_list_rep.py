@@ -3,7 +3,7 @@ from typing import Sequence
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 from app.models.models import MasterList, MasterSkills
 from app.models.enum_model import StatusMasterCheck
 
@@ -37,7 +37,8 @@ class MasterListRep():
         elif block_select is True:
             stmt = await self.session.get(
                 MasterList, master_id,
-                with_for_update=block_select)
+                with_for_update=block_select,
+                options=[selectinload(MasterList.master_skills)])
         return stmt
 
 

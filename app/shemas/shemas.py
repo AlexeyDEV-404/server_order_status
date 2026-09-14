@@ -122,3 +122,14 @@ class MasterListOut(BaseModel):
             status=master.status,
             skills=[SkillsValid.model_validate(ms.skills)
                     for ms in master.master_skills])
+
+
+class MasterListAllValid(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    status: StatusMasterCheck
+    master_skills: list[MasterSkillValid]
+
+
